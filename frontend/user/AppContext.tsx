@@ -127,7 +127,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             profileData.isAffiliate === true ||
             profileData.is_affiliate === true ||
             profileData.role === 'MEMBER_AFFILIATE' ||
-            activeUser.isAffiliate === true
+            activeUser.isAffiliate === true ||
+            activeUser.role === 'MEMBER_AFFILIATE'
           ),
           
           streakCount: 

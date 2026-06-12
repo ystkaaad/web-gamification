@@ -23,14 +23,15 @@ export interface User {
   points?: number;
   memberLevel?: LoyaltyLevel;
   member_level?: LoyaltyLevel;
-  referralCode?: string;
-  referral_code?: string;
+  referralCode?: string | null;
+  referral_code?: string | null;
   streakCount?: number;
   streak_count?: number;
   lastCheckIn?: string | null;
   last_check_in?: string | null;
   isAffiliate?: boolean;
   is_affiliate?: boolean;
+  role?: string;
 }
 
 export interface Transaction {
