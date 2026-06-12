@@ -1,0 +1,6 @@
+{
+  "name": "Gamification Admin Panel",
+  "description": "Admin panel for managing missions, vouchers, and user points linked to Google Sheets via Apps Script.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

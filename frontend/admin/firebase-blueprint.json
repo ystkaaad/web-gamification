@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and gamification status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "is_affiliate": { "type": "boolean" },
+        "affiliate_status": { "type": "string", "enum": ["PENDING", "ACTIVE", "INACTIVE"] },
+        "points": { "type": "number" },
+        "level": { "type": "string" },
+        "referral_code": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Master Data Misi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "points_reward": { "type": "number" },
+        "target_total": { "type": "number" }
+      },
+      "required": ["id", "title", "points_reward"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Master Data Hadiah",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "code": { "type": "string" },
+        "expiry_date": { "type": "string" },
+        "image_url": { "type": "string" },
+        "cost_points": { "type": "number" }
+      },
+      "required": ["id", "title", "cost_points"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Data Transaksi/Pesanan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "affiliate_code": { "type": "string" },
+        "amount": { "type": "number" },
+        "item_name": { "type": "string" },
+        "points_earned": { "type": "number" },
+        "transaction_date": { "type": "string" }
+      },
+      "required": ["id", "user_id", "amount"]
+    },
+    "PointHistory": {
+      "title": "PointHistory",
+      "description": "Log Poin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "date": { "type": "string" },
+        "type": { "type": "string", "enum": ["EARN", "REDEEM", "ADJUSTMENT"] },
+        "points": { "type": "number" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "user_id", "points", "type"]
+    },
+    "UserMission": {
+      "title": "UserMission",
+      "description": "Progress Misi User",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "mission_id": { "type": "string" },
+        "current_progress": { "type": "number" },
+        "is_completed": { "type": "boolean" }
+      },
+      "required": ["user_id", "mission_id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/missions/{missionId}": {
+      "schema": "Mission",
+      "description": "Mission masters"
+    },
+    "/vouchers/{voucherId}": {
+      "schema": "Voucher",
+      "description": "Voucher masters"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transaction records"
+    },
+    "/point_histories/{historyId}": {
+      "schema": "PointHistory",
+      "description": "Point history logs"
+    },
+    "/user_missions/{userMissionId}": {
+      "schema": "UserMission",
+      "description": "User mission progress"
+    }
+  }
+}

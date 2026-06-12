@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Profil pengguna yang mencakup member dan afiliator.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID pengguna" },
+        "name": { "type": "string", "description": "Nama lengkap" },
+        "email": { "type": "string", "format": "email" },
+        "isAffiliate": { "type": "boolean", "description": "Status dari membership system" },
+        "points": { "type": "integer" },
+        "memberLevel": { "type": "string", "enum": ["SILVER", "GOLD", "PLATINUM"] },
+        "referralCode": { "type": "string" },
+        "streakCount": { "type": "integer" },
+        "lastCheckIn": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "points", "memberLevel", "isAffiliate"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Definisi misi gamifikasi.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "points": { "type": "integer" },
+        "target": { "type": "integer" },
+        "type": { "type": "string", "enum": ["DAILY", "REFERRAL", "TRANSACTION"] }
+      }
+    },
+    "UserMission": {
+      "title": "UserMission",
+      "description": "Progres misi per pengguna.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "missionId": { "type": "string" },
+        "progress": { "type": "integer" },
+        "completed": { "type": "boolean" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PointHistory": {
+      "title": "PointHistory",
+      "description": "Log mutasi poin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["EARN", "REDEEM"] },
+        "amount": { "type": "integer" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Data transaksi pembelian makanan.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "pointsEarned": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Reward": {
+      "title": "Reward",
+      "description": "Katalog hadiah/voucher.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "cost": { "type": "integer" },
+        "expiryDays": { "type": "integer" },
+        "image": { "type": "string" }
+      }
+    },
+    "Redemption": {
+      "title": "Redemption",
+      "description": "Log penukaran poin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "rewardId": { "type": "string" },
+        "code": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "USED", "EXPIRED"] },
+        "redeemedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Koleksi utama pengguna."
+    },
+    "/missions/{missionId}": {
+      "schema": "Mission",
+      "description": "Master data misi."
+    },
+    "/users/{userId}/missions/{userMissionId}": {
+      "schema": "UserMission",
+      "description": "Sub-koleksi misi per user."
+    },
+    "/point_history/{historyId}": {
+      "schema": "PointHistory",
+      "description": "Log riwayat poin global."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Log transaksi pembelian."
+    },
+    "/rewards/{rewardId}": {
+      "schema": "Reward",
+      "description": "Master data reward."
+    },
+    "/redemptions/{redemptionId}": {
+      "schema": "Redemption",
+      "description": "Data penukaran voucher."
+    }
+  }
+}
