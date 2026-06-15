@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -73,7 +73,6 @@ const MissionPage: React.FC = () => {
     const game = games.find(g => g.id === gameId);
     if (!game || !user) return;
 
-    // Explicitly cast to numbers to avoid type issues
     const userPoints = Math.round(Number(user.points) || 0);
     const gameCost = Math.round(Number(game.cost_points) || 0);
 
@@ -99,27 +98,22 @@ const MissionPage: React.FC = () => {
         return;
       }
 
-      // 1. Deduct cost first
-      if (game.cost_points > 0) {
-        await addPoints(-game.cost_points, "Bermain Game");
-      }
-
-      // 2. Calculate dynamic result from config_data probabilities
       const segments = Array.isArray(game.config_data) ? game.config_data : [];
-      
+
       if (segments.length === 0) {
         setErrorModal('Hadiah game belum dikonfigurasi oleh admin. Silakan coba game lain.');
         setIsPlaying(false);
         return;
       }
-      
+
+      const segmentsCount = segments.length || 6;
+
       const getSegmentProbability = (segment: Record<string, unknown>) =>
         Number(segment.probability ?? segment.Probability ?? segment.probabilitas ?? 0) || 0;
 
       const getRandomReward = (rewards: any[]) => {
         const totalProb = rewards.reduce((acc, s) => acc + getSegmentProbability(s), 0);
         if (totalProb <= 0) return rewards[Math.floor(Math.random() * rewards.length)];
-        
         let random = Math.random() * totalProb;
         for (const segment of rewards) {
           const prob = getSegmentProbability(segment);
@@ -130,42 +124,45 @@ const MissionPage: React.FC = () => {
       };
 
       const winReward = getRandomReward(segments);
-      const prizeValue = Number(winReward.Value || winReward.value || 0) || 0;
-      const prizeLabel = winReward.Label || winReward.label || 'Zonk';
-      const prizeType = prizeValue > 0 ? 'POINTS' : 'ZONK';
+      const idx = segments.indexOf(winReward);
+      const segmentAngle = 360 / segmentsCount;
+      const targetStopAngle = 360 - (idx * segmentAngle);
+      const extraSpins = 5 * 360;
+      const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
+      setRotation(nextRotation);
 
-      // 3. Animation Logic
-      if (game.type === 'SPINWHEEL') {
-        const idx = segments.indexOf(winReward);
-        const segmentsCount = segments.length || 6;
-        const segmentAngle = 360 / segmentsCount;
-        const targetStopAngle = 360 - (idx * segmentAngle);
-        
-        const extraSpins = 5 * 360; 
-        const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
-        setRotation(nextRotation);
-        
-        await new Promise(r => setTimeout(r, 4500)); // Wait for spin
-      } else {
-        await new Promise(r => setTimeout(r, 2000)); 
+      await new Promise(r => setTimeout(r, 4500));
+
+      const playResponse = await apiService.playGame(user.id, game.id);
+      const playData = playResponse.data;
+
+      if (!playData?.success) {
+        setErrorModal(playData?.message || 'Gagal memproses game.');
+        setIsPlaying(false);
+        return;
       }
 
-      // 4. Update Result and Add Points
-      const resultData = {
+      const backendResult = playData.data;
+      const prizeLabel = backendResult?.prizeLabel ?? winReward.Label ?? winReward.label ?? 'Zonk';
+      const prizeValue = Number(backendResult?.rewardValue ?? winReward.Value ?? winReward.value ?? 0) || 0;
+      const prizeType = backendResult?.rewardType ?? (prizeValue > 0 ? 'POINTS' : 'ZONK');
+      const isVoucher = prizeType === 'VOUCHER';
+
+      const message = isVoucher
+        ? `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`
+        : prizeValue > 0
+          ? `Selamat! Anda memenangkan ${prizeLabel}`
+          : 'Yah, coba lagi lain kali ya!';
+
+      setGameResult({
         success: true,
         prizeLabel,
         prizeValue,
         prizeType,
-        message: prizeValue > 0 ? `Selamat! Anda memenangkan ${prizeLabel}` : 'Yah, coba lagi lain kali ya!'
-      };
+        message,
+      });
 
-      setGameResult(resultData);
-      
-      // NOTE: playGame menggunakan placeholder karena endpoint backend belum tersedia
-      // Logika game tetap dijalankan di frontend untuk development
-      // await apiService.playGame(user.id, game.id);
-
-      if (prizeValue > 0) {
+      if (prizeValue > 0 && !isVoucher) {
         confetti({
           particleCount: 150,
           spread: 70,
@@ -180,7 +177,6 @@ const MissionPage: React.FC = () => {
       setIsPlaying(false);
     }
   };
-
   const isExpired = (endDate: string) => new Date() > new Date(endDate);
 
   if (loading || appLoading) {
@@ -356,7 +352,11 @@ const MissionPage: React.FC = () => {
               
               <button 
                 disabled={m.completed || (m.progress ?? 0) < (m.total ?? m.target ?? 0)}
-                onClick={() => completeMission(m.id)}
+                onClick={() => {
+                  if (typeof m.id === 'string' || typeof m.id === 'number') {
+                    completeMission(String(m.id));
+                  }
+                }}
                 className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   m.completed 
                   ? 'bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed' 

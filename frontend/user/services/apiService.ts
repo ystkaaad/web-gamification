@@ -33,7 +33,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // 1. Bersihkan session/token
       clearAuthData();
-      
+
       // 2. Redirect berbasis HashRouter HANYA jika belum berada di halaman login
       // Ini mencegah infinite loop pada screen Login
       if (window.location.hash !== '#/login') {
@@ -99,24 +99,16 @@ export const apiService = {
   getGames: () =>
     api.get('/games'),
 
-  playGame: async (userId: string, gameId: string) => {
-    // TODO: Implementasikan endpoint backend untuk fitur ini
-    console.warn('TODO: Endpoint backend playGame belum tersedia');
-    return {
-      data: {
-        success: false,
-        message: 'Backend playGame belum tersedia',
-        data: null
-      }
-    };
-  },
+  playGame: (userId: string, gameId: string) =>
+    api.post('/games/play', {
+      userId,
+      gameId,
+    }),
 
-  // TODO: Ganti dengan endpoint backend sebenarnya untuk fitur ini
-  checkGameCooldown: async (userId: string, gameId: string) => {
-    // TODO: Endpoint backend belum tersedia untuk fitur ini
-    console.warn('TODO: Endpoint backend untuk checkGameCooldown belum tersedia');
-    return { data: { allowed: true, message: 'Cooldown bypassed' } };
-  },
+  checkGameCooldown: (userId: string, gameId: string) =>
+    api.get('/games/cooldown', {
+      params: { userId, gameId },
+    }),
 
   // ================= HISTORY =================
   getPointsHistory: (userId: string) =>
@@ -133,6 +125,18 @@ export const apiService = {
   getReferralEarnings: (affiliateId: string) =>
     api.get('/referral-earnings', {
       params: { affiliateId },
+    }),
+
+  getReferralMembers: (userId: string) =>
+    api.get('/referrals/members', {
+      params: { userId },
+    }),
+
+  // ================= VOUCHER =================
+  claimVoucher: (userId: string, voucherId: string) =>
+    api.post('/vouchers/claim', {
+      userId,
+      voucherId,
     }),
 };
 

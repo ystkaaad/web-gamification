@@ -6,6 +6,7 @@
  */
 
 import { gasService } from './gasService';
+import { apiService } from './apiService';
 import { generateId } from '../utils/generateId';
 import {
   User,
@@ -14,6 +15,8 @@ import {
   Transaction,
   PointLedger,
   GameSetting,
+  Redemption,
+  UserMission,
 } from '../types';
 
 interface CacheEntry<T> {
@@ -169,7 +172,7 @@ export const dbService = {
       if (cached) return cached;
     }
     try {
-      const data = await gasService.getVouchers();
+      const data = await apiService.getVouchers();
       if (!Array.isArray(data)) return [];
       const vouchers = data
         .filter((v: { id?: string; title?: string }) => v.id || v.title)
@@ -208,17 +211,17 @@ export const dbService = {
       is_approved: voucher.is_approved ?? false,
       code: `VCH-${Date.now().toString(36).slice(-6).toUpperCase()}`,
     };
-    return gasService.addVoucher(payload);
+    return apiService.createVoucher(payload);
   },
 
   async updateVoucher(id: string, data: Partial<Voucher>) {
     clearCache('vouchers');
-    await gasService.updateVoucher(id, data as Record<string, unknown>);
+    return apiService.updateVoucher(id, data as Record<string, unknown>);
   },
 
   async deleteVoucher(id: string) {
     clearCache('vouchers');
-    await gasService.deleteVoucher(id);
+    return apiService.deleteVoucher(id);
   },
 
   async getTransactions(forceRefresh = false): Promise<Transaction[]> {
@@ -266,9 +269,9 @@ export const dbService = {
     }
   },
 
-  async getRedemptions(forceRefresh = false) {
+  async getRedemptions(forceRefresh = false): Promise<Redemption[]> {
     if (!forceRefresh) {
-      const cached = getCached<unknown[]>('redemptions');
+      const cached = getCached<Redemption[]>('redemptions');
       if (cached) return cached;
     }
     try {
@@ -279,7 +282,7 @@ export const dbService = {
         .map((r: Record<string, unknown>, idx: number) => ({
           ...r,
           id: (r.id as string) || `red-${idx}`,
-        }));
+        })) as Redemption[];
       setCached('redemptions', items);
       return items;
     } catch (error) {
@@ -288,9 +291,9 @@ export const dbService = {
     }
   },
 
-  async getUserMissions(forceRefresh = false) {
+  async getUserMissions(forceRefresh = false): Promise<UserMission[]> {
     if (!forceRefresh) {
-      const cached = getCached<unknown[]>('userMissions');
+      const cached = getCached<UserMission[]>('userMissions');
       if (cached) return cached;
     }
     try {
@@ -301,7 +304,7 @@ export const dbService = {
         .map((um: Record<string, unknown>, idx: number) => ({
           ...um,
           id: (um.id as string) || `um-${idx}`,
-        }));
+        })) as UserMission[];
       setCached('userMissions', items);
       return items;
     } catch (error) {

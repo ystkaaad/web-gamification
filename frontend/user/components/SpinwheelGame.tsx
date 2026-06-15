@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -99,8 +99,8 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
 
       // [PERBAIKAN]: Cek kemenangan berdasarkan Tipe atau Angka (menangani Voucher Teks)
       const prizeLabel = resultData?.prizeLabel ?? 'Tidak ada hadiah';
-      const prizeValue = Number(resultData?.prizeValue ?? 0);
-      const rewardType = resultData?.rewardType ?? 'POINT';
+      const prizeValue = Number(resultData?.prizeValue ?? resultData?.rewardValue ?? 0);
+      const rewardType = resultData?.rewardType ?? resultData?.prizeType ?? 'POINT';
       const isVoucher = rewardType === 'VOUCHER';
       const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
       const isZonk = rewardType === 'POINT' && numericValue === 0 && !isVoucher;

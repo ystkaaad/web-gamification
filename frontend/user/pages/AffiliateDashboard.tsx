@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, Variants } from 'motion/react';
 import { useApp } from '../AppContext';
 import { 
   Share2, Users, Trophy, Copy, 
@@ -72,14 +72,14 @@ const AffiliateDashboard: React.FC = () => {
     m.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  const containerVariants: Variants = {
+    hidden: { opacity: '0' },
+    visible: { opacity: '1', transition: { staggerChildren: 0.1 } }
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: '0' },
+    visible: { y: 0, opacity: '1', transition: { type: "spring", stiffness: 100 } }
   };
 
   return (

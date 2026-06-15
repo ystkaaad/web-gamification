@@ -1,4 +1,4 @@
-/* AppContext.tsx - Core State Management with Real API Integration */
+﻿/* AppContext.tsx - Core State Management with Real API Integration */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { User, Transaction, Mission, Voucher, ReferralMember, ReferralTransaction, LoyaltyLevel, Game } from './types';
@@ -46,7 +46,7 @@ export const useApp = () => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncStatus, setLastSyncStatus] = useState<'success' | 'error' | 'idle'>('idle');
   
@@ -184,8 +184,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const referralData = unwrapData<any[]>(refRes);
           setReferralHistory(referralData || []);
           
-          // TODO: Implement referral members setelah endpoint backend tersedia
-          setReferralMembers([]);
+          const refMembersRes = await apiService.getReferralMembers(latestUser.id).catch(() => ({ data: [] }));
+          const refMembersData = unwrapData<any[]>(refMembersRes);
+          setReferralMembers(refMembersData || []);
         } catch (e) {
           console.error("Gagal fetch referral", e);
         }
@@ -222,21 +223,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoading(true);
   
       try {
-        const token = localStorage.getItem('token');
         const savedUser = localStorage.getItem('ngolabify_user_v1');
   
-        if (token && savedUser) {
-          const parsed = JSON.parse(savedUser);
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
   
-          if (parsed?.id) {
-            setUser(parsed);
-            await refreshData(parsed);
+          if (parsedUser?.id) {
+            setUser(parsedUser);
+            await refreshData(parsedUser);
           }
         }
       } catch (error) {
-        console.error(error);
-  
-        localStorage.removeItem('token');
+        console.error('Gagal restore session:', error);
         localStorage.removeItem('ngolabify_user_v1');
       } finally {
         setIsLoading(false);
@@ -255,9 +253,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const response = await apiService.login(email, password);
       
-      console.log('LOGIN RESPONSE:', response.data);
+      console.log('FULL LOGIN RESPONSE:', response.data);
 
-      const token = response.data.token || response.data.data?.token;
+      const token =
+        response.data?.data?.accessToken ||
+        response.data?.data?.token ||
+        response.data?.accessToken ||
+        response.data?.token ||
+        null;
+
+      console.log('TOKEN YANG DITEMUKAN:', token);
+
+      if (!token) {
+        throw new Error('Token tidak ditemukan dari response login');
+      }
+
       const loggedInUser = response.data.data?.user || {};
       const userGamification = response.data.data?.userGamification || {};
 
@@ -442,13 +452,25 @@ const normalizedUser: User = {
     }
   }, [user, addNotification, refreshData]);
 
-  const claimVoucher = async (_voucher: Voucher): Promise<boolean> => {
-    addNotification(
-      'Fitur voucher sedang dalam proses migrasi backend.',
-      'info'
-    );
-    // TODO: Implementasikan menggunakan apiService.claimVoucher() setelah endpoint tersedia
-    return false;
+  const claimVoucher = async (voucher: Voucher): Promise<boolean> => {
+    if (!user) return false;
+    setIsSyncing(true);
+    try {
+      const response = await apiService.claimVoucher(user.id, voucher.id);
+      const resData = response.data;
+      if (resData?.success) {
+        addNotification('Voucher berhasil ditukar!', 'success');
+        await refreshData();
+        return true;
+      }
+      addNotification(resData?.message || 'Gagal menukar voucher.', 'error');
+      return false;
+    } catch (error: any) {
+      addNotification(error.response?.data?.message || 'Gagal menukar voucher.', 'error');
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const processMemberTransaction = async (nominal: number, affiliateCode: string) => {

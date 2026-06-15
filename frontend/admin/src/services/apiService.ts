@@ -136,6 +136,19 @@ export const apiService = {
       params: { userId },
     }),
 
+  // ================= VOUCHERS =================
+  getVouchers: () =>
+    api.get('/api/admin/vouchers'),
+
+  createVoucher: (data: Record<string, unknown>) =>
+    api.post('/api/admin/vouchers', data),
+
+  updateVoucher: (voucherId: string, data: Record<string, unknown>) =>
+    api.put(`/api/admin/vouchers/${voucherId}`, data),
+
+  deleteVoucher: (voucherId: string) =>
+    api.delete(`/api/admin/vouchers/${voucherId}`),
+
   // ================= REFERRAL =================
   getReferralEarnings: (
     affiliateId?: string
