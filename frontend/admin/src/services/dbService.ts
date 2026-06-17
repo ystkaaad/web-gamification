@@ -446,6 +446,7 @@ export const dbService = {
 
   // =================================================================
   // FUNGSI BARU: SINKRONISASI GAME SPINWHEEL (ANTI-CHEAT)
+  // TODO: Migrate to REST API /games/spin when backend endpoint is ready
   // =================================================================
   async playSpinwheel(userId: string, gameId: string) {
     // Bersihkan cache agar poin terbaru user langsung ter-update di layar
@@ -453,7 +454,7 @@ export const dbService = {
     clearCache('transactions');
     clearCache('ledger');
     
-    // Menggunakan assertion 'any' agar tidak error saat menunggu Anda mengupdate gasService
+    // TODO: Replace with apiService.spinGame(gameId) using JWT auth
     return (gasService as any).playSpinwheel({ userId, gameId });
   },
 };

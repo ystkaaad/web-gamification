@@ -21,9 +21,46 @@ import {
   Package,
   ArrowUpCircle
 } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
 import { Mission } from '../types';
 import { toast } from 'react-hot-toast';
+
+type MissionRecord = Partial<Mission> & {
+  rewardPoints?: unknown;
+  status?: unknown;
+  itemCode?: unknown;
+  item_code?: unknown;
+  targetAmount?: unknown;
+  target_amount?: unknown;
+  target?: unknown;
+  type?: unknown;
+};
+
+const normalizeMission = (mission: MissionRecord, index: number): Mission => {
+  const configData =
+    typeof mission.config_data === 'string'
+      ? mission.config_data
+      : JSON.stringify({
+          type: String(mission.type || 'ONE_TIME'),
+          itemCode: String(mission.itemCode || mission.item_code || ''),
+          targetAmount: Number(mission.targetAmount ?? mission.target_amount ?? mission.target ?? 1),
+        });
+  const isActive = mission.is_active as unknown;
+
+  return {
+    id: String(mission.id || `mission-${index}`),
+    title: String(mission.title || ''),
+    description: String(mission.description || ''),
+    reward_points: Number(mission.reward_points ?? mission.rewardPoints ?? 0),
+    is_active: isActive === true || String(isActive) === 'true' || mission.status === 'active',
+    config_data: configData,
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
 
 export default function Missions() {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -54,10 +91,10 @@ export default function Missions() {
 
   const loadMissions = async () => {
     try {
-      const data = await dbService.getMissions();
-      setMissions(data);
+      const data = await apiService.getMissions();
+      setMissions(unwrapData<any[]>(data).map(normalizeMission));
     } catch (error) {
-      toast.error('Gagal memuat daftar misi');
+      toast.error(getErrorMessage(error, 'Gagal memuat daftar misi'));
     } finally {
       setLoading(false);
     }
@@ -71,18 +108,24 @@ const handleSaveMission = async () => {
 
   setSaving(true);
   try {
+    const payload = {
+      ...editingMission,
+      reward_points: Number(editingMission.reward_points || 0),
+      is_active: editingMission.is_active !== false,
+    } as Mission;
+
     if (editingMission.id) {
-      await dbService.updateMission(editingMission.id, editingMission);
+      await apiService.updateMission(editingMission.id, payload as unknown as Record<string, unknown>);
       toast.success('Misi berhasil diperbarui');
     } else {
-      await dbService.addMission(editingMission as Omit<Mission, 'id'>);
+      await apiService.createMission(payload as unknown as Record<string, unknown>);
       toast.success('Misi baru berhasil dibuat');
     }
     await loadMissions();
     setEditingMission(null);
   } catch (error) {
     console.error("Save mission error:", error);
-    toast.error('Gagal menyimpan misi');
+    toast.error(getErrorMessage(error, 'Gagal menyimpan misi'));
   } finally {
     setSaving(false);
   }
@@ -90,11 +133,11 @@ const handleSaveMission = async () => {
 
   const toggleMissionStatus = async (mission: Mission) => {
     try {
-      await dbService.updateMission(mission.id, { is_active: !mission.is_active });
+      await apiService.updateMission(mission.id, { ...mission, is_active: !mission.is_active } as unknown as Record<string, unknown>);
       toast.success('Status misi berhasil diperbarui');
       await loadMissions();
     } catch (error) {
-      toast.error('Gagal mengubah status');
+      toast.error(getErrorMessage(error, 'Gagal mengubah status'));
     }
   };
 
@@ -102,12 +145,12 @@ const handleSaveMission = async () => {
     if (!window.confirm('Hapus misi ini dari spreadsheet?')) return;
 
     try {
-      await dbService.deleteMission(missionId);
-      setMissions(prev => prev.filter(item => item.id !== missionId));
+      await apiService.deleteMission(missionId);
       toast.success('Misi berhasil dihapus');
+      await loadMissions();
     } catch (error) {
       console.error('Delete mission error:', error);
-      toast.error('Gagal menghapus misi');
+      toast.error(getErrorMessage(error, 'Gagal menghapus misi'));
     }
   };
 

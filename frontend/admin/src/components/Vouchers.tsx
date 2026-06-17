@@ -24,13 +24,42 @@ import {
   Clock,
   List
 } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
 import { Voucher, AdminRole } from '../types';
 import { toast } from 'react-hot-toast';
 
 interface VouchersProps {
   role?: AdminRole;
 }
+
+const normalizeVoucher = (voucher: Record<string, unknown>, index: number): Voucher => {
+  const status = String(voucher.status || (voucher.is_approved ? 'APPROVED' : 'PENDING')).toUpperCase();
+
+  return {
+    id: String(voucher.id || `voucher-${index}`),
+    title: String(voucher.title || ''),
+    description: String(voucher.description || ''),
+    points_cost: Number(voucher.points_cost ?? voucher.cost_points ?? voucher.cost ?? 0),
+    stock: Number(voucher.stock ?? 0),
+    expiry_days: Number(voucher.expiry_days ?? 0),
+    image_url: String(voucher.image_url ?? voucher.image ?? ''),
+    is_approved: voucher.is_approved === true || status === 'APPROVED',
+    status: status === 'APPROVED' ? 'APPROVED' : status === 'DRAFT' ? 'DRAFT' : 'PENDING',
+    voucher_type: String(voucher.voucher_type || 'PERCENTAGE'),
+    voucher_value:
+      typeof voucher.voucher_value === 'string' || typeof voucher.voucher_value === 'number'
+        ? voucher.voucher_value
+        : undefined,
+    max_discount: Number(voucher.max_discount ?? 0),
+    min_purchase: Number(voucher.min_purchase ?? 0),
+    cashier_instruction: String(voucher.cashier_instruction || ''),
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
 
 export default function Vouchers({ role }: VouchersProps) {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -50,10 +79,10 @@ export default function Vouchers({ role }: VouchersProps) {
 
   const loadVouchers = async () => {
     try {
-      const data = await dbService.getVouchers();
-      setVouchers(data);
+      const data = await apiService.getVouchers();
+      setVouchers(unwrapData<any[]>(data).map(normalizeVoucher));
     } catch (error) {
-      toast.error('Gagal memuat daftar voucher');
+      toast.error(getErrorMessage(error, 'Gagal memuat daftar voucher'));
     } finally {
       setLoading(false);
     }
@@ -67,12 +96,21 @@ export default function Vouchers({ role }: VouchersProps) {
 
     setSaving(true);
     try {
+      const payload = {
+        ...editingVoucher,
+        points_cost: Number(editingVoucher.points_cost || 0),
+        stock: Number(editingVoucher.stock || 0),
+        expiry_days: Number(editingVoucher.expiry_days || 0),
+        max_discount: Number(editingVoucher.max_discount || 0),
+        min_purchase: Number(editingVoucher.min_purchase || 0),
+      };
+
       if (editingVoucher.id) {
-        await dbService.updateVoucher(editingVoucher.id, editingVoucher);
+        await apiService.updateVoucher(editingVoucher.id, payload);
         toast.success('Voucher berhasil diperbarui');
       } else {
-        await dbService.addVoucher({
-          ...editingVoucher,
+        await apiService.createVoucher({
+          ...payload,
           status: 'PENDING',
           is_approved: false
         });
@@ -81,7 +119,7 @@ export default function Vouchers({ role }: VouchersProps) {
       await loadVouchers();
       setEditingVoucher(null);
     } catch (error) {
-      toast.error('Gagal menyimpan voucher');
+      toast.error(getErrorMessage(error, 'Gagal menyimpan voucher'));
     } finally {
       setSaving(false);
     }
@@ -91,12 +129,12 @@ export default function Vouchers({ role }: VouchersProps) {
     if (!window.confirm('Hapus voucher ini dari spreadsheet?')) return;
 
     try {
-      await dbService.deleteVoucher(voucherId);
-      setVouchers(prev => prev.filter(item => item.id !== voucherId));
+      await apiService.deleteVoucher(voucherId);
       toast.success('Voucher berhasil dihapus');
+      await loadVouchers();
     } catch (error) {
       console.error('Delete voucher error:', error);
-      toast.error('Gagal menghapus voucher');
+      toast.error(getErrorMessage(error, 'Gagal menghapus voucher'));
     }
   };
 

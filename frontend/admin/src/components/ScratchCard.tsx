@@ -185,11 +185,14 @@ export default function ScratchCard({ game, user, onClose, onUpdateUser }: Scrat
   }, [isRevealed]);
 
   const handleRevealComplete = async () => {
+    // TODO: Migrate to REST API backend endpoint /games/scratch when available
+    // Backend should handle: cost point deduction, reward calculation, point update
     if (isCompleted || !winner) return;
     setIsCompleted(true);
     
     try {
       if (winner.value > 0) {
+        // TODO: Replace dbService.updatePoints with backend /games/scratch endpoint
         await dbService.updatePoints(user.id, winner.value, `Hadiah ${game.name}`);
         toast.success(`Selamat! Kamu menang ${winner.value} poin!`);
         onUpdateUser();

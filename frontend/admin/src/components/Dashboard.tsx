@@ -21,12 +21,152 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
+import { Mission, PointLedger, User, Voucher } from '../types';
+import { toast } from 'react-hot-toast';
 
 // ==========================================
 // 1. SINKRONISASI: IMPORT KOMPONEN AI TOOLKIT
 // ==========================================
 import AiMarketingTips from '../components/AiMarketingTips';
+
+type UserRecord = Partial<User> & {
+  userId?: string;
+  phone?: string;
+  isAffiliate?: boolean;
+  createdAt?: string;
+  memberLevel?: string;
+  streakCount?: number;
+  lastCheckIn?: string | null;
+};
+
+type MissionRecord = Partial<Mission> & {
+  rewardPoints?: unknown;
+  status?: string;
+  configData?: unknown;
+};
+
+type VoucherRecord = Partial<Voucher> & {
+  cost?: unknown;
+  cost_points?: unknown;
+  image?: string;
+  is_approved?: boolean;
+};
+
+type PointLedgerRecord = Partial<PointLedger> & {
+  userId?: string;
+  user_id?: string;
+  points?: unknown;
+  pointsChange?: unknown;
+  points_change?: unknown;
+  description?: string;
+  item?: string;
+  source?: string;
+  source_id?: string;
+  source_type?: string;
+  createdAt?: string;
+};
+
+const getString = (value: unknown, fallback = '') => {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+};
+
+const getNumber = (value: unknown) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value.replace(/[^0-9.-]/g, '')) || 0;
+  return 0;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
+
+const normalizeUser = (user: UserRecord, index: number): User => {
+  const id = getString(user.id || user.userId, `user-${index}`);
+
+  return {
+    ...user,
+    id,
+    userId: getString(user.userId || id),
+    name: getString(user.name || user.email || id),
+    email: getString(user.email || ''),
+    phone_number: getString(user.phone_number || user.phone || ''),
+    is_affiliate: user.is_affiliate ?? Boolean(user.isAffiliate),
+    created_at: getString(user.created_at || user.createdAt, new Date().toISOString()),
+    points: getNumber(user.points),
+    cashback: getNumber(user.cashback),
+    level: getString(user.level || user.memberLevel || 'SILVER'),
+    total_transaksi: getNumber(user.total_transaksi),
+    network_volume: getNumber(user.network_volume),
+    total_member: getNumber(user.total_member),
+    referralCode: getString(user.referralCode || ''),
+    current_streak: getNumber(user.current_streak ?? user.streakCount),
+    max_streak: getNumber(user.max_streak),
+    last_checkin_at: getString(user.last_checkin_at ?? user.lastCheckIn, ''),
+  };
+};
+
+const normalizeMission = (mission: MissionRecord, index: number): Mission => {
+  const configData =
+    typeof mission.config_data === 'string'
+      ? mission.config_data
+      : typeof mission.configData === 'string'
+        ? mission.configData
+        : JSON.stringify(mission.config_data ?? mission.configData ?? {});
+
+  return {
+    id: getString(mission.id, `mission-${index}`),
+    title: getString(mission.title || ''),
+    description: getString(mission.description || ''),
+    reward_points: getNumber(mission.reward_points ?? mission.rewardPoints),
+    is_active:
+      mission.is_active === true ||
+      String(mission.is_active) === 'true' ||
+      mission.status === 'active',
+    config_data: configData,
+  };
+};
+
+const normalizeVoucher = (voucher: VoucherRecord, index: number): Voucher => {
+  const status = getString(voucher.status || (voucher.is_approved ? 'APPROVED' : 'PENDING')).toUpperCase();
+  const normalizedStatus = status === 'APPROVED' ? 'APPROVED' : status === 'DRAFT' ? 'DRAFT' : 'PENDING';
+
+  return {
+    id: getString(voucher.id, `voucher-${index}`),
+    title: getString(voucher.title || ''),
+    description: getString(voucher.description || ''),
+    points_cost: getNumber(voucher.points_cost ?? voucher.cost_points ?? voucher.cost),
+    stock: getNumber(voucher.stock),
+    expiry_days: getNumber(voucher.expiry_days),
+    image_url: getString(voucher.image_url || voucher.image || ''),
+    is_approved: voucher.is_approved === true || normalizedStatus === 'APPROVED',
+    status: normalizedStatus,
+    voucher_type: voucher.voucher_type,
+    voucher_value: voucher.voucher_value,
+    max_discount: voucher.max_discount,
+    min_purchase: voucher.min_purchase,
+    cashier_instruction: voucher.cashier_instruction,
+  };
+};
+
+const normalizePointLedger = (ledger: PointLedgerRecord, index: number): PointLedger => {
+  const amount = getNumber(ledger.amount ?? ledger.points ?? ledger.pointsChange ?? ledger.points_change);
+  const type = getString(ledger.type, amount >= 0 ? 'EARN' : 'REDEEM').toUpperCase();
+  const normalizedType = type === 'REDEEM' ? 'REDEEM' : type === 'ADJUSTMENT' ? 'ADJUSTMENT' : 'EARN';
+
+  return {
+    id: getString(ledger.id, `ledger-${index}`),
+    user_id: getString(ledger.user_id || ledger.userId || ''),
+    type: normalizedType,
+    amount,
+    source_type: getString(ledger.source_type || ledger.source || ''),
+    source_id: getString(ledger.source_id || ledger.id || ''),
+    external_reference_id: ledger.external_reference_id ? getString(ledger.external_reference_id) : undefined,
+    created_at: getString(ledger.created_at || ledger.createdAt || ''),
+  };
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -39,8 +179,8 @@ export default function Dashboard() {
   // =================================================================
   // 2. SINKRONISASI: STATE BARU UNTUK MENAMPUNG ARRAY DATA REAL SPREADSHEET
   // =================================================================
-  const [rawUsers, setRawUsers] = useState<any[]>([]);
-  const [rawVouchers, setRawVouchers] = useState<any[]>([]);
+  const [rawUsers, setRawUsers] = useState<User[]>([]);
+  const [rawVouchers, setRawVouchers] = useState<Voucher[]>([]);
   
   // STATE BARU: Untuk menyimpan data grafik Earn & Burn yang sudah dinamis
   const [dynamicChartData, setDynamicChartData] = useState<any[]>([]);
@@ -49,63 +189,56 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
+      setLoading(true);
       try {
-        // Parallel fetching for better performance
-        const [users, missions, vouchers, ledger, dashboardStats] = await Promise.all([
-          dbService.getUsers(),
-          dbService.getMissions(),
-          dbService.getVouchers(),
-          dbService.getPointLedger(),
-          dbService.getStats()
+        const [usersResponse, missionsResponse, vouchersResponse, ledgerResponse] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getMissions(),
+          apiService.getVouchers(),
+          apiService.getPointsHistory(),
         ]);
+
+        const users = unwrapData<User[]>(usersResponse).map(normalizeUser);
+        const missions = unwrapData<Mission[]>(missionsResponse).map(normalizeMission);
+        const vouchers = unwrapData<Voucher[]>(vouchersResponse).map(normalizeVoucher);
+        const ledger = unwrapData<PointLedger[]>(ledgerResponse).map(normalizePointLedger);
         
-        // Menghitung Total Interaksi Game berdasarkan jumlah aktivitas di riwayat (ledger)
-        const totalGamificationEvents = ledger ? ledger.length : 0;
+        const totalGamificationEvents = ledger.length;
 
         setStats({
-          users: dashboardStats.totalUsers || (users ? users.length : 0),
-          missions: dashboardStats.totalMissions || (missions ? missions.length : 0),
-          vouchers: dashboardStats.totalVouchers || (vouchers ? vouchers.length : 0),
+          users: users.length,
+          missions: missions.length,
+          vouchers: vouchers.length,
           totalInteractions: totalGamificationEvents
         });
 
-        // ===================================================================
-        // 3. SINKRONISASI: SET DATA ASLI AGAR BISA DIALIRKAN KE MASING-MASING VARIABEL AI
-        // ===================================================================
-        setRawUsers(users || []);
-        setRawVouchers(vouchers || []);
+        setRawUsers(users);
+        setRawVouchers(vouchers);
 
-        // ===================================================================
-        // LOGIKA BARU: MENGHITUNG DATA GRAFIK 7 HARI TERAKHIR DARI LEDGER
-        // ===================================================================
         if (ledger && Array.isArray(ledger)) {
           const namaHari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
           const last7Days: any[] = [];
           
-          // Buat template 7 hari mundur dari hari ini
           for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             last7Days.push({
               name: namaHari[d.getDay()],
-              dateStr: d.toISOString().split('T')[0], // Format YYYY-MM-DD
+              dateStr: d.toISOString().split('T')[0],
               earn: 0,
               spend: 0
             });
           }
 
-          // Masukkan data transaksi riil ke template hari tersebut
-          ledger.forEach((tx: any) => {
-            if (!tx.createdAt) return;
+          ledger.forEach((tx) => {
+            if (!tx.created_at) return;
             try {
-              const txDate = new Date(tx.createdAt).toISOString().split('T')[0];
+              const txDate = new Date(tx.created_at).toISOString().split('T')[0];
               const dayIndex = last7Days.findIndex(d => d.dateStr === txDate);
               
               if (dayIndex !== -1) {
-                const points = Number(tx.pointsChange || tx.amount || tx.points) || 0;
-                // Jika poin bertambah (Masuk), hitung sebagai aktivitas Earn (Klaim)
+                const points = Number(tx.amount) || 0;
                 if (points > 0) last7Days[dayIndex].earn += 1; 
-                // Jika poin berkurang (Keluar), hitung sebagai aktivitas Spend (Tukar)
                 if (points < 0) last7Days[dayIndex].spend += 1;
               }
             } catch (e) {
@@ -118,6 +251,16 @@ export default function Dashboard() {
 
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+        toast.error(getErrorMessage(error, 'Gagal memuat data dashboard'));
+        setStats({
+          users: 0,
+          missions: 0,
+          vouchers: 0,
+          totalInteractions: 0
+        });
+        setRawUsers([]);
+        setRawVouchers([]);
+        setDynamicChartData([]);
       } finally {
         setLoading(false);
       }

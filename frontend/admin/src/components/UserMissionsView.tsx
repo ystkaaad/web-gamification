@@ -15,9 +15,38 @@ import {
   Activity,
   History
 } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
 import { UserMission } from '../types';
 import { toast } from 'react-hot-toast';
+
+type UserMissionRecord = Partial<UserMission> & {
+  user_id?: string;
+  mission_id?: string;
+  completed_at?: string;
+  status?: string;
+};
+
+const getString = (value: unknown, fallback = '') => {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
+
+const normalizeUserMission = (item: UserMissionRecord, index: number): UserMission => {
+  const status = getString(item.status, 'STARTED').toUpperCase();
+
+  return {
+    id: getString(item.id, `um-${index}`),
+    userId: getString(item.userId || item.user_id || ''),
+    missionId: getString(item.missionId || item.mission_id || ''),
+    status: status === 'COMPLETED' ? 'COMPLETED' : 'STARTED',
+    completedAt: item.completedAt || item.completed_at || undefined,
+  };
+};
 
 export default function UserMissionsView() {
   const [userMissions, setUserMissions] = useState<UserMission[]>([]);
@@ -30,10 +59,10 @@ export default function UserMissionsView() {
 
   const loadUserMissions = async () => {
     try {
-      const data = await dbService.getUserMissions();
-      setUserMissions(data);
+      const data = await apiService.getUserMissions();
+      setUserMissions(unwrapData<UserMission[]>(data).map(normalizeUserMission));
     } catch (error) {
-      toast.error('Gagal memuat status misi user');
+      toast.error(getErrorMessage(error, 'Gagal memuat status misi user'));
     } finally {
       setLoading(false);
     }

@@ -47,11 +47,13 @@ api.interceptors.response.use(
 
 export const apiService = {
   // ================= AUTH =================
-  login: (email: string, password: string) =>
-    api.post('/auth/login', {
+  login: (email: string, password: string) => {
+    const API_HOST = (import.meta.env.VITE_GAMIFICATION_API_URL || '').replace('/api/gamification', '');
+    return axios.post(`${API_HOST}/api/membership/login`, {
       email,
       password,
-    }),
+    });
+  },
 
   // getProfile() digunakan untuk data autentikasi.
   // getUserById() digunakan oleh AppContext untuk sinkronisasi data gamification.
@@ -61,82 +63,69 @@ export const apiService = {
   lookupUser: (data: Record<string, unknown>) =>
     api.post('/auth/lookup', data),
 
-  // ================= USER =================
+// ================= USER =================
   getUserById: (userId: string) =>
     api.get(`/users/${userId}`),
 
   updateUser: (userId: string, data: Record<string, unknown>) =>
     api.put(`/users/${userId}`, data),
 
-  dailyCheckIn: (userId: string) =>
-    api.post(`/users/${userId}/checkin`),
+  addPoints: (points: number, description?: string) =>
+    api.post('/users/add-points', { points, description }),
 
-  addPoints: (userId: string, points: number, description?: string) =>
-    api.post(`/users/${userId}/add-points`, {
-      points,
-      description,
-    }),
+  // ================= CHECKIN =================
+  checkIn: () =>
+    api.post('/checkin'),
 
   // ================= MISSIONS =================
   getMissions: () =>
     api.get('/missions'),
 
-  getUserMissions: (userId: string) =>
-    api.get('/user-missions', {
-      params: { userId },
-    }),
+  getUserMissions: () =>
+    api.get('/user-missions'),
 
-  completeMission: (
-    userId: string,
-    missionId: string
-  ) =>
-    api.post('/user-missions/complete', {
-      userId,
-      missionId,
-    }),
+  completeMission: (missionId: string) =>
+    api.post('/user-missions/complete', { missionId }),
 
   // ================= GAMES =================
   getGames: () =>
     api.get('/games'),
 
-  playGame: (userId: string, gameId: string) =>
-    api.post('/games/play', {
-      userId,
-      gameId,
-    }),
+  spinGame: (gameId: string) =>
+    api.post('/games/spin', { gameId }),
 
-  checkGameCooldown: (userId: string, gameId: string) =>
+  scratchGame: (gameId: string) =>
+    api.post('/games/scratch', { gameId }),
+
+  checkGameCooldown: (gameId: string) =>
     api.get('/games/cooldown', {
-      params: { userId, gameId },
+      params: { gameId },
     }),
 
   // ================= HISTORY =================
-  getPointsHistory: (userId: string) =>
-    api.get('/points-history', {
-      params: { userId },
-    }),
+  getPointsHistory: () =>
+    api.get('/points/history'),
 
-  getGamePlays: (userId: string) =>
-    api.get('/game-plays', {
-      params: { userId },
-    }),
+  getGamePlays: () =>
+    api.get('/game-plays'),
 
   // ================= REFERRAL =================
-  getReferralEarnings: (affiliateId: string) =>
-    api.get('/referral-earnings', {
-      params: { affiliateId },
-    }),
+  getReferralEarnings: () =>
+    api.get('/referral-earnings'),
 
-  getReferralMembers: (userId: string) =>
-    api.get('/referrals/members', {
-      params: { userId },
-    }),
+  getReferralMembers: () =>
+    api.get('/referrals/members'),
 
   // ================= VOUCHER =================
-  claimVoucher: (userId: string, voucherId: string) =>
+  getVouchers: () =>
+    api.get('/vouchers'),
+
+  getUserVouchers: () =>
+    api.get('/user-vouchers'),
+
+  claimVoucher: (voucherCode: string) =>
     api.post('/vouchers/claim', {
-      userId,
-      voucherId,
+      voucherCode,
     }),
 };
 

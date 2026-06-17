@@ -22,7 +22,7 @@ import {
   Coins,
   Ticket
 } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
 import { GameSetting } from '../types';
 import { toast } from 'react-hot-toast';
 import ScratchManager from './ScratchManager';
@@ -41,6 +41,37 @@ interface DailyStreakConfig {
   streakBonus: number;
   maxDays: number;
 }
+
+type GameType = GameSetting['type'];
+
+const normalizeGame = (game: Record<string, unknown>, index: number): GameSetting => {
+  const type = String(game.type || 'SPINWHEEL').toUpperCase();
+  const normalizedType: GameType =
+    type === 'DAILY_STREAK' || type === 'SCRATCHCARD' ? type : 'SPINWHEEL';
+
+  return {
+    id: String(game.id || `game-${index}`),
+    name: String(game.name || game.title || 'Game'),
+    type: normalizedType,
+    cost_points: Number(game.cost_points ?? game.costPoints ?? 0),
+    reward_points: Number(game.reward_points ?? game.rewardPoints ?? 0),
+    config_data:
+      typeof game.config_data === 'string'
+        ? game.config_data
+        : JSON.stringify(game.config_data ?? {}),
+    is_active:
+      game.is_active === true ||
+      game.is_active === 'true' ||
+      game.is_active === 'TRUE' ||
+      game.is_active === 1 ||
+      game.status === 'active',
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
 
 export default function GameManager() {
   const [games, setGames] = useState<GameSetting[]>([]);
@@ -150,10 +181,10 @@ export default function GameManager() {
 
   const loadGames = async () => {
     try {
-      const data = await dbService.getGames();
-      setGames(data);
+      const data = await apiService.getGames();
+      setGames(unwrapData<any[]>(data).map(normalizeGame));
     } catch (error) {
-      toast.error('Gagal memuat pengaturan game');
+      toast.error(getErrorMessage(error, 'Gagal memuat pengaturan game'));
     } finally {
       setLoading(false);
     }
@@ -220,18 +251,18 @@ export default function GameManager() {
         finalGame.config_data = JSON.stringify(dailyStreakConfig);
       }
 
-      try {
-        await dbService.updateGame(finalGame.id!, finalGame);
+      if (updatedGame.id) {
+        await apiService.updateGame(finalGame.id!, finalGame);
         toast.success(`Game ${finalGame.name} berhasil diperbarui`);
-      } catch (e) {
-        await dbService.addGame(finalGame as Omit<GameSetting, 'id'>);
-        toast.success(`Game ${finalGame.name} berhasil diinisialisasi`);
+      } else {
+        await apiService.createGame(finalGame as Record<string, unknown>);
+        toast.success(`Game ${finalGame.name} berhasil dibuat`);
       }
 
       setEditingGame(null);
       await loadGames();
     } catch (error) {
-      toast.error('Gagal menyimpan perubahan');
+      toast.error(getErrorMessage(error, 'Gagal menyimpan perubahan'));
       console.error(error);
     } finally {
       setSaving(false);
@@ -247,12 +278,25 @@ export default function GameManager() {
       
       const updatedStatus = !game.is_active;
       
-      await dbService.updateGame(staticId, { ...game, id: staticId, is_active: updatedStatus });
+      await apiService.updateGame(staticId, { ...game, id: staticId, is_active: updatedStatus });
       
       toast.success(`Game ${game.name} ${updatedStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
-      loadGames();
+      await loadGames();
     } catch (error) {
-      toast.error('Gagal memperbarui status game');
+      toast.error(getErrorMessage(error, 'Gagal memperbarui status game'));
+    }
+  };
+
+  const handleDeleteGame = async (gameId: string, gameName: string) => {
+    if (!window.confirm(`Hapus game ${gameName}?`)) return;
+
+    try {
+      await apiService.deleteGame(gameId);
+      toast.success(`Game ${gameName} berhasil dihapus`);
+      await loadGames();
+    } catch (error) {
+      console.error('Delete game error:', error);
+      toast.error(getErrorMessage(error, 'Gagal menghapus game'));
     }
   };
 
@@ -344,13 +388,23 @@ export default function GameManager() {
                     </button>
                     <div className="flex gap-3">
                       {game ? (
-                        <button 
-                          onClick={() => toggleGameStatus(game)}
-                          className={`flex-1 py-3.5 rounded-xl text-[8px] font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 border ${game.is_active ? 'bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white border-rose-100' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white border-emerald-100'}`}
-                        >
-                          {game.is_active ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                          {game.is_active ? 'Matikan' : 'Aktifkan'}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => toggleGameStatus(game)}
+                            className={`flex-1 py-3.5 rounded-xl text-[8px] font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 border ${game.is_active ? 'bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white border-rose-100' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white border-emerald-100'}`}
+                          >
+                            {game.is_active ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                            {game.is_active ? 'Matikan' : 'Aktifkan'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGame(game.id, game.name)}
+                            className="p-3.5 rounded-xl text-[8px] font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 border border-rose-100 bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white active:scale-95"
+                            title="Hapus game"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Hapus
+                          </button>
+                        </>
                       ) : (
                         <div className="flex-1 py-3.5 rounded-xl text-[8px] font-black uppercase tracking-[0.1em] border border-orange-100 bg-orange-50/30 text-orange-300 flex items-center justify-center">
                           Belum Setup

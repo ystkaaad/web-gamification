@@ -97,9 +97,10 @@ const TopNavbar: React.FC = () => {
 // Komponen Protected Route untuk mencegah akses tidak sah
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useApp();
+  const token = localStorage.getItem('token');
   const storedUser = localStorage.getItem('ngolabify_user_v1');
 
-  const isAuthenticated = !!user || !!storedUser;
+  const isAuthenticated = !!user && !!token && !!storedUser;
 
   if (isLoading) {
     return (

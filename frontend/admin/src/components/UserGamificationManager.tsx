@@ -18,9 +18,60 @@ import {
   Edit,
   ArrowRight
 } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
 import { User } from '../types';
 import { toast } from 'react-hot-toast';
+
+type UserRecord = Partial<User> & {
+  userId?: string;
+  phone?: string;
+  isAffiliate?: boolean;
+  createdAt?: string;
+  memberLevel?: string;
+  streakCount?: number;
+  lastCheckIn?: string | null;
+};
+
+const getString = (value: unknown, fallback = '') => {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+};
+
+const getNumber = (value: unknown) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value.replace(/[^0-9.-]/g, '')) || 0;
+  return 0;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
+
+const normalizeUser = (user: UserRecord, index: number): User => {
+  const id = getString(user.id || user.userId, `user-${index}`);
+
+  return {
+    ...user,
+    id,
+    userId: getString(user.userId || id),
+    name: getString(user.name || user.email || id),
+    email: getString(user.email || ''),
+    phone_number: getString(user.phone_number || user.phone || ''),
+    is_affiliate: user.is_affiliate ?? Boolean(user.isAffiliate),
+    created_at: getString(user.created_at || user.createdAt, new Date().toISOString()),
+    points: getNumber(user.points),
+    cashback: getNumber(user.cashback),
+    level: getString(user.level || user.memberLevel || 'SILVER'),
+    total_transaksi: getNumber(user.total_transaksi),
+    network_volume: getNumber(user.network_volume),
+    total_member: getNumber(user.total_member),
+    referralCode: getString(user.referralCode || ''),
+    current_streak: getNumber(user.current_streak ?? user.streakCount),
+    max_streak: getNumber(user.max_streak),
+    last_checkin_at: getString(user.last_checkin_at ?? user.lastCheckIn, ''),
+  };
+};
 
 export default function UserGamificationManager() {
   const [users, setUsers] = useState<User[]>([]);
@@ -33,10 +84,10 @@ export default function UserGamificationManager() {
 
   const loadUsers = async () => {
     try {
-      const data = await dbService.getUsers();
-      setUsers(data);
+      const data = await apiService.getUsers();
+      setUsers(unwrapData<User[]>(data).map(normalizeUser));
     } catch (error) {
-      toast.error('Gagal memuat daftar user');
+      toast.error(getErrorMessage(error, 'Gagal memuat daftar user'));
     } finally {
       setLoading(false);
     }

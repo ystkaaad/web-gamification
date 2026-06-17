@@ -84,17 +84,10 @@ const DailyStreak: React.FC = () => {
     try {
       console.log('Claiming streak for user:', user.id);
 
-      const currentDay = Math.min(
-        user?.streakCount || 0,
-        streakRewards.length - 1
-      );
-
-      const rewardPoints = streakRewards[currentDay] || baseReward;
-
-      const response: any = await apiService.dailyCheckIn(user.id);
+      const response: any = await apiService.checkIn();
       const result = response.data;
 
-      if (result) {
+      if (result && result.success) {
         setLocalCheckedIn(true);
         
         confetti({

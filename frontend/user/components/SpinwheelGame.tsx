@@ -39,25 +39,23 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
     setIsPlaying(true);
     setGameResult(null);
 
-    try {
-      // 1. Panggil Backend via apiService untuk Acak & Potong Poin (Anti-Cheat)
-      const response: any = await apiService.playGame(user.id, game.id);
-      const resData = response?.data;
+try {
+      // [PERBAIKAN]: MEMANGGIL API BACKEND UNTUK MENGUNDI (ANTI-CHEAT)
+      const response: any = await apiService.spinGame(game.id);
+      const resData = response?.data?.data;
       
       // Validasi jika backend belum tersedia
-      if (!resData?.success) {
+      if (!response?.data?.success) {
         addNotification(
-          resData?.message ?? 'Game sedang dalam pengembangan',
+          response?.data?.message ?? 'Game sedang dalam pengembangan',
           'info'
         );
         setIsPlaying(false);
         return;
       }
-
-      const resultData = resData.data;
       
       // Validasi data hadiah ada
-      if (!resultData) {
+      if (!resData) {
         addNotification('Tidak ada data hadiah dari server', 'error');
         setIsPlaying(false);
         return;
@@ -75,7 +73,7 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       const segmentsCount = segments.length || 6;
       
       // 3. Kalkulasi Animasi (Math) dengan nilai aman
-      const selectedIdx = resultData?.selectedIndex ?? 0;
+      const selectedIdx = resData?.selectedIndex ?? 0;
       const segmentAngle = 360 / segmentsCount;
       const targetStopAngle = 270 - ((selectedIdx + 0.5) * segmentAngle); 
       const extraSpins = 8 * 360; 
@@ -98,9 +96,9 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       }
 
       // [PERBAIKAN]: Cek kemenangan berdasarkan Tipe atau Angka (menangani Voucher Teks)
-      const prizeLabel = resultData?.prizeLabel ?? 'Tidak ada hadiah';
-      const prizeValue = Number(resultData?.prizeValue ?? resultData?.rewardValue ?? 0);
-      const rewardType = resultData?.rewardType ?? resultData?.prizeType ?? 'POINT';
+      const prizeLabel = resData?.prizeLabel ?? 'Tidak ada hadiah';
+      const prizeValue = Number(resData?.prizeValue ?? resData?.rewardValue ?? 0);
+      const rewardType = resData?.rewardType ?? resData?.prizeType ?? 'POINT';
       const isVoucher = rewardType === 'VOUCHER';
       const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
       const isZonk = rewardType === 'POINT' && numericValue === 0 && !isVoucher;

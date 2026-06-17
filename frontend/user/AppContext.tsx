@@ -76,10 +76,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshData = useCallback(async (currentUser?: User) => {
     if (syncRef.current) return;
     
+    const token = localStorage.getItem('token');
     const storedUser = JSON.parse(localStorage.getItem('ngolabify_user_v1') || 'null');
     const activeUser = currentUser || storedUser;
     
-    if (!activeUser || !activeUser.id) {
+    if (!activeUser || !activeUser.id || !token) {
       return;
     }
 
@@ -97,8 +98,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         apiService.getUserById(activeUser.id).catch(() => ({ data: activeUser })),
         apiService.getMissions().catch(() => ({ data: [] })),
         apiService.getGames().catch(() => ({ data: [] })),
-        apiService.getPointsHistory(activeUser.id).catch(() => ({ data: [] })),
-        apiService.getUserMissions(activeUser.id).catch(() => ({ data: [] }))
+        apiService.getPointsHistory().catch(() => ({ data: [] })),
+        apiService.getUserMissions().catch(() => ({ data: [] }))
       ]);
 
       const profileData = unwrapData<any>(profileRes);
@@ -177,14 +178,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setMissions(mergedMissions);
 
-      // Pengecekan referral HANYA menggunakan state `latestUser` yang pasti sudah ternormalisasi 
-      if (latestUser.isAffiliate) {
+// Pengecekan referral HANYA menggunakan state `latestUser` yang pasti sudah ternormalisasi 
+       if (latestUser.isAffiliate) {
         try {
-          const refRes = await apiService.getReferralEarnings(latestUser.id);
+          const refRes = await apiService.getReferralEarnings();
           const referralData = unwrapData<any[]>(refRes);
           setReferralHistory(referralData || []);
           
-          const refMembersRes = await apiService.getReferralMembers(latestUser.id).catch(() => ({ data: [] }));
+          const refMembersRes = await apiService.getReferralMembers().catch(() => ({ data: [] }));
           const refMembersData = unwrapData<any[]>(refMembersRes);
           setReferralMembers(refMembersData || []);
         } catch (e) {
@@ -195,9 +196,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setReferralMembers([]);
       }
 
-      // TODO: Integrasi backend voucher setelah endpoint tersedia
-      setVouchers([]);
-      setMyVouchers([]);
+// TODO: Integrasi backend voucher setelah endpoint tersedia
+       const vouchersRes = await apiService.getVouchers().catch(() => ({ data: [] }));
+       const vouchersData = unwrapData<any[]>(vouchersRes);
+       setVouchers(vouchersData || []);
+       
+       const myVouchersRes = await apiService.getUserVouchers().catch(() => ({ data: [] }));
+       const myVouchersData = unwrapData<any[]>(myVouchersRes);
+       setMyVouchers(myVouchersData || []);
 
       setLastSyncStatus('success');
     } catch (error: any) {
@@ -258,8 +264,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const token =
         response.data?.data?.accessToken ||
         response.data?.data?.token ||
-        response.data?.accessToken ||
-        response.data?.token ||
         null;
 
       console.log('TOKEN YANG DITEMUKAN:', token);
@@ -268,8 +272,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error('Token tidak ditemukan dari response login');
       }
 
-      const loggedInUser = response.data.data?.user || {};
-      const userGamification = response.data.data?.userGamification || {};
+      const loggedInUser = response.data?.data?.user || {};
+      const userGamification = response.data?.data?.userGamification || {};
 
 const normalizedUser: User = {
         ...loggedInUser,
@@ -414,7 +418,7 @@ const normalizedUser: User = {
     if (!user) return;
     setIsSyncing(true);
     try {
-      await apiService.dailyCheckIn(user.id);
+      await apiService.checkIn();
       addNotification(`Check-in Berhasil!`, 'success');
       await refreshData();
     } catch (error: any) {
@@ -428,7 +432,7 @@ const normalizedUser: User = {
     if (!user) return;
     setIsSyncing(true);
     try {
-      await apiService.completeMission(user.id, missionId);
+      await apiService.completeMission(missionId);
       addNotification(`Misi Selesai!`, 'success');
       await refreshData();
     } catch (error: any) {
@@ -442,7 +446,7 @@ const normalizedUser: User = {
     if (!user) return;
     setIsSyncing(true);
     try {
-      await apiService.addPoints(user.id, points, description);
+      await apiService.addPoints(points, description);
       addNotification(points > 0 ? `+${points} Poin: ${description}` : `${points} Poin: ${description}`, 'success');
       await refreshData();
     } catch (error: any) {
@@ -456,7 +460,7 @@ const normalizedUser: User = {
     if (!user) return false;
     setIsSyncing(true);
     try {
-      const response = await apiService.claimVoucher(user.id, voucher.id);
+      const response = await apiService.claimVoucher(voucher.code);
       const resData = response.data;
       if (resData?.success) {
         addNotification('Voucher berhasil ditukar!', 'success');
@@ -478,7 +482,7 @@ const normalizedUser: User = {
     setIsSyncing(true);
     try {
       const pointsEarned = Math.floor(nominal / 100); 
-      await apiService.addPoints(user.id, pointsEarned, `Transaksi via Kasir ${affiliateCode}`);
+      await apiService.addPoints(pointsEarned, `Transaksi via Kasir ${affiliateCode}`);
       addNotification(`Transaksi berhasil diproses!`, 'success');
       await refreshData();
     } catch (error) {

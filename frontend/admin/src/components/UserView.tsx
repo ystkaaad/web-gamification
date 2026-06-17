@@ -36,33 +36,15 @@ export default function UserView() {
       setVouchers(v);
       setGames(g.filter(game => game.is_active));
       
-      // HARDCODED TESTING USER: USR-999
-      const testerId = "USR-999";
-      let currentUser = u.find(user => user.userId === testerId || user.id === testerId);
+      // Use first available user or null if no users exist
+      const currentUser = u.length > 0 ? u[0] : null;
       
       if (!currentUser) {
-        // If tester not in DB, create initial record or use first user as template but override ID
-        currentUser = {
-          id: testerId,
-          userId: testerId,
-          name: "User Tester",
-          points: 1000,
-          cashback: 0,
-          level: "GOLD",
-          streakCount: 0,
-          referralCode: "TESTER999",
-          is_active: true
-        } as any;
+        // No users in system - show empty state
+        setUser(null);
       } else {
-        // Ensure name and level are as requested for the test
-        currentUser = {
-          ...currentUser,
-          name: "User Tester",
-          level: "GOLD"
-        };
+        setUser(currentUser);
       }
-      
-      setUser(currentUser);
     } catch (error) {
       console.error("User view error:", error);
     } finally {
@@ -72,7 +54,8 @@ export default function UserView() {
 
   const handleExchange = async (voucher: Voucher) => {
     if (!user) return;
-    const userId = user.userId || user.id || 'USR-999';
+    const userId = user.userId || user.id;
+    if (!userId) return;
     if (user.points < voucher.points_cost) {
       toast.error('Poin tidak cukup!');
       return;
@@ -80,7 +63,7 @@ export default function UserView() {
 
     setExchanging(voucher.id);
     try {
-      // 1. Deduct points with history
+      // TODO: Migrate to backend /vouchers/claim when available
       await dbService.updatePoints(
         userId, 
         -voucher.points_cost, 
@@ -98,10 +81,11 @@ export default function UserView() {
 
   const handleClaimMission = async (mission: Mission) => {
     if (!user) return;
-    const userId = user.userId || user.id || 'USR-999';
+    const userId = user.userId || user.id;
+    if (!userId) return;
     setClaimingMission(mission.id);
     try {
-      // Add points
+      // TODO: Migrate to backend user-missions/complete when available
       await dbService.updatePoints(
         userId, 
         mission.reward_points, 

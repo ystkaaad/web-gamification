@@ -140,7 +140,8 @@ export default function SpinwheelUser({ game, user, onClose, onUpdateUser }: Spi
     setIsSpinning(true);
     
     try {
-      // Cek Cooldown (Opsional)
+      // Cek Cooldown (Opsional) - TODO: Migrate to REST API when available
+      // TODO: This should use /games/cooldown with JWT auth instead of GAS
       const cooldown = await dbService.canPlayGame(user.id, game.id);
       if (!cooldown.allowed) {
         toast.error(cooldown.message || 'Mesin sedang memproses putaran sebelumnya.');
@@ -150,6 +151,7 @@ export default function SpinwheelUser({ game, user, onClose, onUpdateUser }: Spi
 
       // [PERBAIKAN]: MEMANGGIL API BACKEND UNTUK MENGUNDI (LOGIKA BANDAR)
       // Backend akan otomatis memotong poin, menambah poin/voucher, dan mencatat log.
+      // TODO: Migrate to REST API /games/spin when available - endpoint already exists in user frontend
       const response = await dbService.playSpinwheel(user.id, game.id) as any;
       
       if (!response || !response.success) {
@@ -177,7 +179,7 @@ export default function SpinwheelUser({ game, user, onClose, onUpdateUser }: Spi
       
       setRotation(newRotation);
 
-      // Tunggu animasi roda berputar hingga selesai
+      // Tunggu animasi roda berputar hinggi selesai
       setTimeout(() => {
         // Set hasil menang sesuai dari server
         setWinner({ ...winnerSegment, label: prizeLabel, type: rewardType });

@@ -89,8 +89,8 @@ const MissionPage: React.FC = () => {
     setIsPlaying(true);
     setGameResult(null);
 
-    try {
-      const cooldownCheckRes = await apiService.checkGameCooldown(user.id, game.id);
+try {
+      const cooldownCheckRes = await apiService.checkGameCooldown(game.id);
       const cooldownCheck = cooldownCheckRes.data;
       if (!cooldownCheck.allowed) {
         setErrorModal(cooldownCheck.message || 'Anda masih dalam cooldown.');
@@ -131,9 +131,8 @@ const MissionPage: React.FC = () => {
       const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
       setRotation(nextRotation);
 
-      await new Promise(r => setTimeout(r, 4500));
-
-      const playResponse = await apiService.playGame(user.id, game.id);
+      // Use spinGame for SPINWHEEL type
+      const playResponse = await apiService.spinGame(game.id);
       const playData = playResponse.data;
 
       if (!playData?.success) {

@@ -1,0 +1,75 @@
+```plantuml
+@startuml GamificationSystem_UseCase
+!theme plain
+left to right direction
+
+skinparam backgroundColor #FFFFFF
+skinparam actorStyle awesome
+skinparam usecase {
+    BackgroundColor #FDFDFD
+    BorderColor #FF8A50
+}
+
+title Use Case Diagram - Sistem Gamifikasi
+
+actor User
+actor Admin
+
+rectangle "Sistem Gamifikasi" {
+
+    ' User Use Cases
+    usecase "View Dashboard" as UC_ViewDashboard
+    usecase "View Profile" as UC_ViewProfile
+    usecase "Daily Check-in" as UC_Checkin
+    usecase "View Mission List" as UC_ViewMissions
+    usecase "Complete Mission" as UC_CompleteMission
+    usecase "Play Spinwheel Game" as UC_PlaySpinwheel
+    usecase "Play Scratchcard Game" as UC_PlayScratch
+    usecase "Redeem Voucher" as UC_RedeemVoucher
+    usecase "View Voucher Catalog" as UC_ViewVouchers
+    usecase "Process Transaction" as UC_ProcessTransaction
+    usecase "View Transaction History" as UC_ViewHistory
+    usecase "View Affiliate Dashboard" as UC_ViewAffiliate
+    usecase "View Referral Members" as UC_ViewReferralMembers
+    usecase "View Referral Earnings" as UC_ViewReferralEarnings
+
+    ' Admin Use Cases
+    usecase "View Admin Dashboard" as UC_AdminDashboard
+    usecase "Manage Missions" as UC_ManageMissions
+    usecase "Manage Vouchers" as UC_ManageVouchers
+    usecase "Manage Games" as UC_ManageGames
+    usecase "View User Gamification Data" as UC_ViewUserData
+    usecase "View User Mission Progress" as UC_ViewMissionProgress
+    usecase "View Redemption History" as UC_ViewRedemptions
+    usecase "Audit Point Mutations" as UC_AuditPoints
+    usecase "Manage User Points" as UC_ManagePoints
+}
+
+' User Relationships
+User --> UC_ViewDashboard
+User --> UC_ViewProfile
+User --> UC_Checkin
+User --> UC_ViewMissions
+User --> UC_CompleteMission
+User --> UC_PlaySpinwheel
+User --> UC_PlayScratch
+User --> UC_RedeemVoucher
+User --> UC_ViewVouchers
+User --> UC_ProcessTransaction
+User --> UC_ViewHistory
+User --> UC_ViewAffiliate
+User --> UC_ViewReferralMembers
+User --> UC_ViewReferralEarnings
+
+' Admin Relationships
+Admin --> UC_AdminDashboard
+Admin --> UC_ManageMissions
+Admin --> UC_ManageVouchers
+Admin --> UC_ManageGames
+Admin --> UC_ViewUserData
+Admin --> UC_ViewMissionProgress
+Admin --> UC_ViewRedemptions
+Admin --> UC_AuditPoints
+Admin --> UC_ManagePoints
+
+@enduml

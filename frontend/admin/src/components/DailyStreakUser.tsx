@@ -57,10 +57,13 @@ export default function DailyStreakUser({ game, user, onClose, onUpdateUser }: D
   }, [user.last_checkin_at]);
 
   const handleCheckIn = async () => {
+    // TODO: Migrate to REST API backend endpoint /checkin when available
+    // Backend should handle: streak calculation, reward calculation, points update
     if (!isCheckInAvailable || loading) return;
 
     setLoading(true);
     try {
+      // Keep local calculation for GAS compatibility until backend /checkin is ready
       const lastCheckin = user.last_checkin_at ? new Date(user.last_checkin_at) : null;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -89,6 +92,8 @@ export default function DailyStreakUser({ game, user, onClose, onUpdateUser }: D
         reward += config.streakBonus;
       }
 
+      // TODO: Replace manual calculation with backend /checkin endpoint
+      // Backend will return: { success, data: { streakCount, rewardPoints, lastCheckIn } }
       await Promise.all([
         dbService.updateUser(user.id, {
           current_streak: newStreak,

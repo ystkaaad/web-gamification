@@ -1,37 +1,75 @@
 import axios from 'axios';
 
+const getApiRoot = () =>
+  (import.meta.env.VITE_GAMIFICATION_API_URL || '').replace(/\/api\/gamification\/?$/, '');
+
+const addAuthHeaders = (config: any) => {
+  const token = localStorage.getItem('adminToken');
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+};
+
+const handleAuthError = (error: any) => {
+  if (error.response?.status === 401) {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
+
+  return Promise.reject(error);
+};
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_GAMIFICATION_API_URL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
+const adminApi = axios.create({
+  baseURL: getApiRoot(),
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => Promise.reject(error)
-);
+});
 
+api.interceptors.request.use(addAuthHeaders);
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-
-    return Promise.reject(error);
-  }
+  handleAuthError
 );
+
+adminApi.interceptors.request.use(addAuthHeaders);
+adminApi.interceptors.response.use(
+  (response) => response,
+  handleAuthError
+);
+
+export const unwrapData = <T>(response: { data: unknown }): T => {
+  const body = response.data;
+
+  if (Array.isArray(body)) return body as T;
+
+  if (body && typeof body === 'object') {
+    const data = body as Record<string, unknown>;
+
+    if (Array.isArray(data.data)) return data.data as T;
+    if (Array.isArray(data.items)) return data.items as T;
+    if (Array.isArray(data.result)) return data.result as T;
+    if (data.success === false) {
+      throw new Error(String(data.message || 'Request failed'));
+    }
+  }
+
+  return body as T;
+};
 
 export const apiService = {
   // ================= AUTH =================
@@ -67,7 +105,8 @@ export const apiService = {
       description,
     }),
 
-  dailyCheckIn: (userId: string) =>
+  // TODO: Migrate admin checkin to /checkin when backend endpoint is ready
+  checkIn: (userId: string) =>
     api.post(`/users/${userId}/checkin`),
 
   // ================= MISSIONS =================
@@ -116,38 +155,28 @@ export const apiService = {
   deleteGame: (gameId: string) =>
     api.delete(`/games/${gameId}`),
 
-  playGame: (
-    userId: string,
-    gameId: string
-  ) =>
-    api.post('/games/play', {
-      userId,
-      gameId,
-    }),
+  // TODO: Migrate to /games/spin when backend endpoint is ready for admin
+  // spinGame: (gameId: string) => api.post('/games/spin', { gameId }),
 
   // ================= HISTORY =================
-  getPointsHistory: (userId?: string) =>
-    api.get('/points-history', {
-      params: { userId },
-    }),
+  getPointsHistory: () =>
+    api.get('/points/history'),
 
-  getGamePlays: (userId?: string) =>
-    api.get('/game-plays', {
-      params: { userId },
-    }),
+  getGamePlays: () =>
+    api.get('/game-plays'),
 
   // ================= VOUCHERS =================
   getVouchers: () =>
-    api.get('/api/admin/vouchers'),
+    adminApi.get('/api/admin/vouchers'),
 
   createVoucher: (data: Record<string, unknown>) =>
-    api.post('/api/admin/vouchers', data),
+    adminApi.post('/api/admin/vouchers', data),
 
   updateVoucher: (voucherId: string, data: Record<string, unknown>) =>
-    api.put(`/api/admin/vouchers/${voucherId}`, data),
+    adminApi.put(`/api/admin/vouchers/${voucherId}`, data),
 
   deleteVoucher: (voucherId: string) =>
-    api.delete(`/api/admin/vouchers/${voucherId}`),
+    adminApi.delete(`/api/admin/vouchers/${voucherId}`),
 
   // ================= REFERRAL =================
   getReferralEarnings: (

@@ -5,10 +5,71 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Filter, Download, History, Zap, ShieldAlert } from 'lucide-react';
-import { dbService } from '../services/dbService';
+import { apiService, unwrapData } from '../services/apiService';
+import { PointLedger } from '../types';
+import { toast } from 'react-hot-toast';
+
+type AuditLedger = PointLedger & {
+  userId?: string;
+  createdAt?: string;
+  pointsChange?: number;
+  points?: number;
+  description?: string;
+  item?: string;
+  source?: string;
+};
+
+type AuditLedgerRecord = Partial<AuditLedger> & {
+  userId?: string;
+  user_id?: string;
+  points?: unknown;
+  pointsChange?: unknown;
+  points_change?: unknown;
+  createdAt?: string;
+};
+
+const getString = (value: unknown, fallback = '') => {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+};
+
+const getNumber = (value: unknown) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value.replace(/[^0-9.-]/g, '')) || 0;
+  return 0;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+  return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
+
+const normalizeAuditLedger = (ledger: AuditLedgerRecord, index: number): AuditLedger => {
+  const amount = getNumber(ledger.amount ?? ledger.points ?? ledger.pointsChange ?? ledger.points_change);
+  const type = getString(ledger.type, amount >= 0 ? 'EARN' : 'REDEEM').toUpperCase();
+  const normalizedType = type === 'REDEEM' ? 'REDEEM' : type === 'ADJUSTMENT' ? 'ADJUSTMENT' : 'EARN';
+
+  return {
+    id: getString(ledger.id, `ledger-${index}`),
+    user_id: getString(ledger.user_id || ledger.userId || ''),
+    type: normalizedType,
+    amount,
+    source_type: getString(ledger.source_type || ledger.source || ''),
+    source_id: getString(ledger.source_id || ledger.id || ''),
+    external_reference_id: ledger.external_reference_id ? getString(ledger.external_reference_id) : undefined,
+    created_at: getString(ledger.created_at || ledger.createdAt || ''),
+    createdAt: getString(ledger.createdAt || ledger.created_at || ''),
+    pointsChange: amount,
+    points: amount,
+    description: getString(ledger.description || ledger.item || ledger.source || ''),
+    item: ledger.item ? getString(ledger.item) : undefined,
+    source: ledger.source ? getString(ledger.source) : undefined,
+    userId: getString(ledger.userId || ledger.user_id || ''),
+  };
+};
 
 export default function AuditPoin() {
-  const [rawLedger, setRawLedger] = useState<any[]>([]);
+  const [rawLedger, setRawLedger] = useState<AuditLedger[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -17,20 +78,21 @@ export default function AuditPoin() {
     const fetchLedger = async () => {
       setIsLoading(true);
       try {
-        // Mengambil data riwayat mutasi dari database Google Sheets
-        const ledger = await dbService.getPointLedger(true); 
+        const response = await apiService.getPointsHistory();
+        const ledger = unwrapData<AuditLedger[]>(response).map(normalizeAuditLedger);
         
         if (ledger && Array.isArray(ledger)) {
-          // Mengurutkan data dari yang paling terbaru (Descending)
-          const sortedLedger = [...ledger].sort((a: any, b: any) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const sortedLedger = [...ledger].sort((a: AuditLedger, b: AuditLedger) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
             return dateB - dateA;
           });
           setRawLedger(sortedLedger);
         }
       } catch (error) {
         console.error('Error fetching audit ledger:', error);
+        toast.error(getErrorMessage(error, 'Gagal memuat riwayat mutasi poin'));
+        setRawLedger([]);
       } finally {
         setIsLoading(false);
       }
@@ -41,7 +103,7 @@ export default function AuditPoin() {
 
   // FITUR PENCARIAN & FILTER
   const filteredLedger = rawLedger.filter((t) => {
-    const points = Number(t.pointsChange || t.amount || t.points) || 0;
+    const points = Number(t.amount) || 0;
     const desc = (t.description || t.item || t.source || '').toLowerCase();
     const userId = String(t.userId || '').toLowerCase();
     const searchLower = searchTerm.toLowerCase();
@@ -151,16 +213,16 @@ export default function AuditPoin() {
                 ) : filteredLedger.length > 0 ? (
                   // Dibatasi 100 baris agar browser tidak lag saat merender ribuan data
                   filteredLedger.slice(0, 100).map((t, index) => {
-                    const points = Number(t.pointsChange || t.amount || t.points) || 0;
+                    const points = Number(t.amount) || 0;
                     const isPositive = points > 0;
 
                     return (
                       <tr key={index} className="hover:bg-orange-50/50 transition-colors">
                         <td className="p-4 pl-6 text-sm text-slate-500 whitespace-nowrap font-medium">
-                          {formatDateTime(t.createdAt)}
+                          {formatDateTime(t.created_at || t.createdAt)}
                         </td>
                         <td className="p-4 text-sm font-bold text-slate-700">
-                          {t.userId || '-'}
+                          {t.user_id || t.userId || '-'}
                         </td>
                         <td className="p-4 text-sm font-medium text-slate-600">
                           {t.description || t.item || t.source || 'Aktivitas Sistem'}
