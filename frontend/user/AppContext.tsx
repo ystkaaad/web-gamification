@@ -331,21 +331,28 @@ const normalizedUser: User = {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('ngolabify_user_v1');
-    setUser(null);
-    setTransactions([]);
-    setMissions([]);
-    setGames([]);
-    setVouchers([]);
-    setMyVouchers([]);
-    setReferralHistory([]);
-    setReferralMembers([]);
-    setIsLoading(false);
-    setIsSyncing(false);
-    setLastSyncStatus('idle');
-  };
+const logout = () => {
+     localStorage.removeItem('token');
+     localStorage.removeItem('ngolabify_user_v1');
+     
+     Object.keys(sessionStorage).forEach(key => {
+       if (key.toLowerCase().includes('auth') || key.toLowerCase().includes('token') || key.toLowerCase().includes('user')) {
+         sessionStorage.removeItem(key);
+       }
+     });
+     
+     setUser(null);
+     setTransactions([]);
+     setMissions([]);
+     setGames([]);
+     setVouchers([]);
+     setMyVouchers([]);
+     setReferralHistory([]);
+     setReferralMembers([]);
+     setIsLoading(false);
+     setIsSyncing(false);
+     setLastSyncStatus('idle');
+   };
 
   // ==========================================
   // MUTASI REST API (CRUD)

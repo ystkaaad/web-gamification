@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle2, Star, ArrowRight, Zap,Gift,Menu,X,ChevronDown,User,Sparkles,MapPin,MessageCircle,TrendingUp,Smartphone
+  CheckCircle2, Star, ArrowRight, Zap, Gift, Menu, X, ChevronDown, User, Sparkles, MapPin, MessageCircle, TrendingUp, Smartphone
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
@@ -32,14 +32,16 @@ const LandingPage: React.FC = () => {
       });
     }
   };
+  
   const goToLogin = () => {
     setIsMenuOpen(false);
     navigate('/login');
   };
+  
   const navLinks = [
     { name: 'Cara Kerja', id: 'cara-kerja' },
     { name: 'Benefit', id: 'benefit' },
-    { name: 'Testimoni', id: 'testimoni' },
+    { name: 'Fitur', id: 'fitur' }, 
     { name: 'FAQ', id: 'faq' }
   ];
 
@@ -68,7 +70,6 @@ const LandingPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Registration/Login buttons removed per user request */}
           <div className="hidden md:flex items-center gap-3">
             <button 
               onClick={goToLogin}
@@ -155,15 +156,15 @@ const LandingPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex items-center justify-center lg:justify-start gap-8 pt-8 opacity-60">
+            <div className="flex items-center justify-center lg:justify-start gap-8 pt-8 opacity-70">
               <div className="flex flex-col">
-                <span className="text-2xl font-black text-[#0F172A]">10K+</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Active Members</span>
+                <span className="text-2xl font-black text-[#0F172A]">Praktis</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tanpa Kartu Fisik</span>
               </div>
               <div className="w-px h-10 bg-slate-200"></div>
               <div className="flex flex-col">
-                <span className="text-2xl font-black text-[#0F172A]">500+</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Partner Outlets</span>
+                <span className="text-2xl font-black text-[#0F172A]">Real-time</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Poin Langsung Masuk</span>
               </div>
             </div>
           </div>
@@ -176,15 +177,19 @@ const LandingPage: React.FC = () => {
                  alt="Loyalty Experience"
                />
                <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent"></div>
+               
                <div className="absolute bottom-12 left-12 right-12 bg-white px-8 py-6 rounded-[2.5rem] border border-orange-100 shadow-xl">
-                  <p className="text-[#0F172A] font-black text-xl italic tracking-tight">"Sangat mudah, cukup scan dan dapat poin. Bakso favorit jadi terasa gratis!"</p>
-                  <div className="flex items-center gap-3 mt-4">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                      <User size={20} className="text-orange-600" />
+                  <div className="flex items-center justify-between mb-4">
+                     <p className="text-[#0F172A] font-black text-lg tracking-tight">Level Platinum 🎉</p>
+                     <div className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-[10px] uppercase tracking-wider font-bold">Terbuka</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center">
+                      <Gift size={20} className="text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-xs font-black text-[#0F172A]">Budi Santoso</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Platinum Member</p>
+                      <p className="text-xs font-black text-[#0F172A]">Voucher Makan Gratis</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Siap Ditukarkan</p>
                     </div>
                   </div>
                </div>
@@ -262,53 +267,40 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimoni Section */}
-      <section id="testimoni" className="py-32 px-6">
+      {/* Fitur Section */}
+      <section id="fitur" className="py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-end justify-between mb-20 gap-8">
             <div className="space-y-4 max-w-2xl">
-              <span className="text-orange-600 font-black text-[10px] uppercase tracking-[0.4em]">Real Stories</span>
-              <h2 className="text-4xl md:text-6xl font-black text-[#0F172A] tracking-tighter italic leading-none">Apa Kata <br/>Keluarga <span className="text-orange-700">Ngolabify?</span></h2>
-            </div>
-            <div className="flex gap-4">
-              <button className="w-14 h-14 bg-white border border-orange-100 rounded-2xl flex items-center justify-center text-[#0F172A] hover:bg-orange-50 transition-all"><ArrowRight size={20} className="rotate-180" /></button>
-              <button className="w-14 h-14 bg-orange-600 rounded-2xl flex items-center justify-center text-white hover:bg-orange-500 transition-all shadow-xl shadow-orange-100"><ArrowRight size={20} /></button>
+              <span className="text-orange-600 font-black text-[10px] uppercase tracking-[0.4em]">Eksplorasi Ekosistem</span>
+              <h2 className="text-4xl md:text-6xl font-black text-[#0F172A] tracking-tighter italic leading-none">Fitur <br/><span className="text-orange-700">Unggulan</span></h2>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                name: "Rina Amelia",
-                role: "Mahasiswi & Member",
-                text: "Dulu sering jajan tapi nggak dapet apa-apa. Sekarang jajan bakso malah bisa dapet voucher mie yamin gratis. Nagih banget!",
-                avatar: "https://i.pravatar.cc/150?u=rina"
+                title: "Poin Otomatis",
+                desc: "Setiap transaksi otomatis dikonversi menjadi poin yang akan langsung masuk ke akun kamu tanpa perlu proses yang rumit.",
+                icon: Zap
               },
               {
-                name: "Hendra Wijaya",
-                role: "Foodie Blogger",
-                text: "Sistem leveling-nya seru, kayak main game tapi dapet makanan beneran. Level Platinum diskonnya nggak main-main!",
-                avatar: "https://i.pravatar.cc/150?u=hendra"
+                title: "Sistem Leveling",
+                desc: "Tingkatkan transaksimu, naikkan level membershipmu, dan dapatkan keuntungan eksklusif yang berbeda di setiap tingkatannya.",
+                icon: TrendingUp
               },
               {
-                name: "Siska Putri",
-                role: "Afiliator Business",
-                text: "Iseng ajak temen sekantor gabung, eh sekarang tiap bulan dapet komisi poin yang lumayan buat makan siang gratis sebulan penuh.",
-                avatar: "https://i.pravatar.cc/150?u=siska"
+                title: "Katalog Hadiah",
+                desc: "Pilih sendiri hadiahmu! Tukarkan poin dengan berbagai macam voucher diskon, merchandise, hingga menu makanan gratis.",
+                icon: Gift
               }
-            ].map((t, idx) => (
-              <div key={idx} className="bg-white p-10 rounded-[3rem] border border-orange-50 shadow-sm hover:shadow-xl transition-all">
-                <div className="flex gap-1 mb-6">
-                  {[...Array(5)].map((_, i) => <Star key={i} size={16} className="text-orange-600 fill-orange-600" />)}
+            ].map((f, idx) => (
+              <div key={idx} className="bg-white p-10 rounded-[3rem] border border-orange-50 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all group">
+                <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-orange-500 transition-colors">
+                  <f.icon size={28} className="text-orange-600 group-hover:text-white transition-colors" />
                 </div>
-                <p className="text-slate-600 font-medium italic text-lg leading-relaxed mb-8">"{t.text}"</p>
-                <div className="flex items-center gap-4">
-                  <img src={t.avatar} className="w-14 h-14 rounded-2xl object-cover" alt="" />
-                  <div>
-                    <h4 className="font-black text-[#0F172A]">{t.name}</h4>
-                    <p className="text-[10px] font-bold text-orange-700 uppercase tracking-widest">{t.role}</p>
-                  </div>
-                </div>
+                <h4 className="font-black text-[#0F172A] text-2xl mb-4">{f.title}</h4>
+                <p className="text-slate-500 font-medium text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -356,7 +348,7 @@ const LandingPage: React.FC = () => {
               <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 blur-[80px] rounded-full"></div>
               <div className="relative z-10 space-y-6">
                 <h2 className="text-4xl md:text-7xl font-black text-white italic tracking-tighter leading-none">Sudah Siap Jajan <br/>Lebih Seru?</h2>
-                <p className="text-white/80 font-medium max-w-xl mx-auto text-lg">Ribuan member sudah menikmati makan gratis tiap minggu. Jangan sampai ketinggalan!</p>
+                <p className="text-white/80 font-medium max-w-xl mx-auto text-lg">Jangan biarkan transaksimu sia-sia. Kumpulkan poinnya dan raih keuntungan berlipat!</p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-6">
                    <button 
                      onClick={goToLogin}
@@ -368,7 +360,8 @@ const LandingPage: React.FC = () => {
               </div>
            </div>
 
-           <div className="mt-32 pt-12 border-t border-orange-100 grid md:grid-cols-4 gap-12 text-slate-400">
+           {/* Grid layout disesuaikan menjadi 3 kolom (md:grid-cols-3) */}
+           <div className="mt-32 pt-12 border-t border-orange-100 grid md:grid-cols-3 gap-12 text-slate-400">
               <div className="space-y-6 col-span-1 md:col-span-1">
                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center text-white font-black">N</div>
@@ -391,14 +384,7 @@ const LandingPage: React.FC = () => {
                 </ul>
               </div>
 
-              <div>
-                <h5 className="text-[#0F172A] font-black text-xs uppercase tracking-widest mb-6">Bantuan</h5>
-                <ul className="space-y-4 text-sm font-bold">
-                  {['Customer Care', 'Syarat & Ketentuan', 'Kebijakan Privasi', 'Keamanan Data'].map(item => (
-                    <li key={item} className="hover:text-orange-500 cursor-pointer transition-colors">{item}</li>
-                  ))}
-                </ul>
-              </div>
+              {/* Bagian Bantuan Telah Dihapus */}
 
               <div className="bg-orange-50 p-8 rounded-[2rem] border border-orange-100">
                 <h5 className="text-[#0F172A] font-black text-xs uppercase tracking-widest mb-4">Newsletter</h5>

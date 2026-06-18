@@ -81,9 +81,13 @@ const TopNavbar: React.FC = () => {
                   <button onClick={() => { setIsDropdownOpen(false); navigate('/profile'); }} className="w-full flex items-center gap-3 p-3 hover:bg-orange-50 text-orange-700 rounded-xl text-sm font-bold">
                     <Settings size={18} /> Profil Saya
                   </button>
-                  <button onClick={logout} className="w-full flex items-center gap-3 p-3 hover:bg-red-50 text-red-500 rounded-xl text-sm font-bold">
-                    <LogOut size={18} /> Keluar Akun
-                  </button>
+<button onClick={() => { 
+                    setIsDropdownOpen(false); 
+                    logout(); 
+                    navigate('/'); 
+                  }} className="w-full flex items-center gap-3 p-3 hover:bg-red-50 text-red-500 rounded-xl text-sm font-bold">
+                     <LogOut size={18} /> Keluar Akun
+                   </button>
                 </div>
               </div>
             )}
@@ -115,9 +119,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!isAuthenticated || !user?.id) {
-    return <Navigate to="/login" replace />;
-  }
+if (!isAuthenticated || !user?.id) {
+     return <Navigate to="/" replace />;
+   }
 
   return <>{children}</>;
 };

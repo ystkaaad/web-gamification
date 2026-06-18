@@ -79,6 +79,12 @@ export const apiService = {
       password,
     }),
 
+  adminLogin: (username: string, password: string) =>
+    adminApi.post('/api/auth/login', {
+      username,
+      password,
+    }),
+
   getProfile: (userId: string) =>
     api.get(`/auth/profile/${userId}`),
 

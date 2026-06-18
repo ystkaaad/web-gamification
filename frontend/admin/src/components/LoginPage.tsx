@@ -9,7 +9,7 @@ import { LogIn, Shield, ChevronRight, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'react-hot-toast';
 
-import { API_URL } from '../config/api';
+import { apiService } from '../services/apiService';
 
 interface LoginPageProps {
   onLoginSuccess: (token: string) => void;
@@ -27,45 +27,29 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true);
     setError('');
 
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify({
-          action: 'ADMIN_LOGIN',
-          payload: {
-            username: username.trim(),
-            password: password.trim()
-          }
-        })
-      });
+    console.log('[ADMIN LOGIN START]');
+    console.log('[USERNAME]', username);
 
-      const textResponse = await response.text();
-      let result;
-      
-      try {
-        result = JSON.parse(textResponse);
-      } catch (parseError) {
-        console.error('Parse Error:', parseError, textResponse);
-        throw new Error('Gagal memproses respon dari server.');
-      }
+    try {
+      const response = await apiService.adminLogin(username.trim(), password.trim());
+      const result = response.data;
+
+      console.log('[ADMIN LOGIN SUCCESS]', result);
       
       if (result.success) {
-        // 1. Simpan token ke localStorage sebagai adminToken
-        const token = result.token || 'auth_token_active';
+        const token = result.token || result.user?.token || 'auth_token_active';
         localStorage.setItem('adminToken', token);
         
-        // 2. Beri Feedback Visual
+        if (result.user) {
+          localStorage.setItem('adminUser', JSON.stringify(result.user));
+        }
+        
         toast.success('Login Berhasil! Mengalihkan ke Dashboard...');
         
-        // 3. Update State Global di App.tsx (Memicu render ulang dashboard)
         if (onLoginSuccess) {
           onLoginSuccess(token);
         }
         
-        // 4. Navigasi menggunakan react-router-dom
         setTimeout(() => {
           navigate('/');
         }, 500);
@@ -76,8 +60,18 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         toast.error(msg);
       }
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Terjadi kesalahan koneksi ke server.');
+      console.error('[ADMIN LOGIN ERROR]', err);
+
+      if (err.response) {
+        console.error('[STATUS]', err.response.status);
+        console.error('[DATA]', err.response.data);
+      }
+
+      if (err.request) {
+        console.error('[REQUEST]', err.request);
+      }
+
+      setError(err.response?.data?.message || err.message || 'Terjadi kesalahan koneksi ke server.');
       toast.error('Gagal terhubung ke server.');
     } finally {
       setIsLoading(false);

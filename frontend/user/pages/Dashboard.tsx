@@ -211,9 +211,9 @@ const Dashboard: React.FC = () => {
   }
 
   // Guard Clause Akhir, TypeScript mengetahui `user` valid sepenuhnya
-  if (!user || !user.id) {
-    return <Navigate to="/login" replace />;
-  }
+if (!user || !user.id) {
+     return <Navigate to="/" replace />;
+   }
 
   // Akses langsung yang aman berkat guard
   const userName = user.name ?? 'Member';
@@ -358,9 +358,9 @@ const Dashboard: React.FC = () => {
                         )}
                       </div>
                    </div>
-                   <button onClick={logout} className="w-full px-4 py-3 md:px-5 md:py-4 mt-2 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all">
-                     Keluar Akun
-                   </button>
+<button onClick={() => { logout(); navigate('/'); }} className="w-full px-4 py-3 md:px-5 md:py-4 mt-2 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all">
+                      Keluar Akun
+                    </button>
                 </div>
              </div>
           </motion.div>
