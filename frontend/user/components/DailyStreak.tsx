@@ -171,7 +171,7 @@ const DailyStreak: React.FC = () => {
           {streakRewards.map((points, index) => {
             const dayNum = index + 1;
             const isClaimed = (user?.streakCount || 0) >= dayNum;
-            const isNext = (user?.streakCount || 0) + 1 === dayNum && !isCheckedInToday;
+            const isNext = (user?.streakCount || 0) + 1 === dayNum && dayNum <= maxDays;
 
             return (
               <motion.div 

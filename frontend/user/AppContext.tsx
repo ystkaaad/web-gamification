@@ -198,11 +198,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 // TODO: Integrasi backend voucher setelah endpoint tersedia
        const vouchersRes = await apiService.getVouchers().catch(() => ({ data: [] }));
-       const vouchersData = unwrapData<any[]>(vouchersRes);
+       const vouchersData = unwrapData<any[]>(vouchersRes).map((v: any) => ({
+         id: v.id,
+         title: v.voucher_name ?? v.title ?? '',
+         description: v.description ?? '',
+         cost: v.points_cost ?? v.cost ?? 0,
+         image: v.image_url ?? v.image ?? '',
+         expiry: v.expiry_days ?? v.expiry ?? '',
+         code: v.voucher_code ?? v.code ?? '',
+         status: v.status ?? '',
+         voucher_type: v.voucher_type,
+         voucher_value: v.voucher_value,
+         max_discount: v.max_discount ?? 0,
+         min_purchase: v.min_purchase ?? 0,
+         cashier_instruction: v.cashier_instruction ?? '',
+         is_approved: v.is_approved,
+         stock: v.stock ?? 0,
+       }));
        setVouchers(vouchersData || []);
-       
+        
        const myVouchersRes = await apiService.getUserVouchers().catch(() => ({ data: [] }));
-       const myVouchersData = unwrapData<any[]>(myVouchersRes);
+       const myVouchersData = unwrapData<any[]>(myVouchersRes).map((v: any) => ({
+         id: v.id,
+         title: v.voucher_name ?? v.title ?? '',
+         description: v.description ?? '',
+         cost: v.points_cost ?? v.cost ?? 0,
+         image: v.image_url ?? v.image ?? '',
+         expiry: v.expiry_days ?? v.expiry ?? '',
+         code: v.voucher_code ?? v.code ?? '',
+         status: v.status ?? '',
+         voucher_type: v.voucher_type,
+         voucher_value: v.voucher_value,
+         max_discount: v.max_discount ?? 0,
+         min_purchase: v.min_purchase ?? 0,
+         cashier_instruction: v.cashier_instruction ?? '',
+         is_approved: v.is_approved,
+         stock: v.stock ?? 0,
+       }));
        setMyVouchers(myVouchersData || []);
 
       setLastSyncStatus('success');

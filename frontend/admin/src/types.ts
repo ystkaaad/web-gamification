@@ -98,7 +98,8 @@ export interface Voucher {
   voucher_value?: string | number;
   max_discount?: number;
   min_purchase?: number;
-  cashier_instruction?: string;
+  voucher_code?: string;
+  voucher_name?: string;
 }
 
 export interface UserVoucher {

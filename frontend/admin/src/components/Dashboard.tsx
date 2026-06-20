@@ -191,12 +191,26 @@ export default function Dashboard() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const [usersResponse, missionsResponse, vouchersResponse, ledgerResponse] = await Promise.all([
-          apiService.getUsers(),
-          apiService.getMissions(),
-          apiService.getVouchers(),
-          apiService.getPointsHistory(),
-        ]);
+        console.time('getUsers');
+        const usersResponse = await apiService.getUsers();
+        console.timeEnd('getUsers');
+
+        console.time('getMissions');
+        const missionsResponse = await apiService.getMissions();
+        console.timeEnd('getMissions');
+
+        console.time('getVouchers');
+        const vouchersResponse = await apiService.getVouchers();
+        console.timeEnd('getVouchers');
+
+        console.time('getPointsHistory');
+        const ledgerResponse = await apiService.getPointsHistory();
+        console.timeEnd('getPointsHistory');
+
+        console.log('[USERS]', usersResponse);
+        console.log('[MISSIONS]', missionsResponse);
+        console.log('[VOUCHERS]', vouchersResponse);
+        console.log('[POINTS_HISTORY]', ledgerResponse);
 
         const users = unwrapData<User[]>(usersResponse).map(normalizeUser);
         const missions = unwrapData<Mission[]>(missionsResponse).map(normalizeMission);
@@ -250,7 +264,7 @@ export default function Dashboard() {
         }
 
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('[DASHBOARD ERROR]', error);
         toast.error(getErrorMessage(error, 'Gagal memuat data dashboard'));
         setStats({
           users: 0,
@@ -268,6 +282,7 @@ export default function Dashboard() {
 
     fetchStats();
   }, []);
+
 
   const kpis = [
     { label: 'Total Pengguna', value: stats.users, icon: Users, color: 'text-orange-600', bg: 'bg-orange-100/50', trend: '+12%' },

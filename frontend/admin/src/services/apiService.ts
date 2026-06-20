@@ -166,7 +166,7 @@ export const apiService = {
 
   // ================= HISTORY =================
   getPointsHistory: () =>
-    api.get('/points/history'),
+    api.get('/points-history'),
 
   getGamePlays: () =>
     api.get('/game-plays'),
@@ -183,6 +183,13 @@ export const apiService = {
 
   deleteVoucher: (voucherId: string) =>
     adminApi.delete(`/api/admin/vouchers/${voucherId}`),
+
+  uploadVoucherImage: (formData: FormData) =>
+    adminApi.post('/api/admin/vouchers/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
 
   // ================= REFERRAL =================
   getReferralEarnings: (

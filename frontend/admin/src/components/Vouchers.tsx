@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Ticket, 
   Plus, 
@@ -36,29 +36,62 @@ const normalizeVoucher = (voucher: Record<string, unknown>, index: number): Vouc
   const status = String(voucher.status || (voucher.is_approved ? 'APPROVED' : 'PENDING')).toUpperCase();
 
   return {
-    id: String(voucher.id || `voucher-${index}`),
-    title: String(voucher.title || ''),
+    id: String(voucher.voucherCode || voucher.voucher_code || voucher.id || `voucher-${index}`),
+    title: String(voucher.title || voucher.voucherName || ''),
     description: String(voucher.description || ''),
-    points_cost: Number(voucher.points_cost ?? voucher.cost_points ?? voucher.cost ?? 0),
-    stock: Number(voucher.stock ?? 0),
-    expiry_days: Number(voucher.expiry_days ?? 0),
-    image_url: String(voucher.image_url ?? voucher.image ?? ''),
-    is_approved: voucher.is_approved === true || status === 'APPROVED',
+    points_cost: Number(voucher.points_cost ?? voucher.pointsCost ?? voucher.cost_points ?? voucher.cost ?? 0),
+    stock: Number(voucher.stock ?? voucher.quota ?? 0),
+    expiry_days: Number(voucher.expiry_days ?? voucher.expiryDays ?? voucher.expiry ?? 0),
+    image_url: String(voucher.image_url ?? voucher.imageUrl ?? voucher.image ?? ''),
+    is_approved: voucher.is_approved === true || voucher.isActive === true || status === 'APPROVED',
     status: status === 'APPROVED' ? 'APPROVED' : status === 'DRAFT' ? 'DRAFT' : 'PENDING',
-    voucher_type: String(voucher.voucher_type || 'PERCENTAGE'),
+    voucher_type: mapBackendToFrontendType(String(voucher.voucher_type ?? voucher.type ?? voucher.voucherType ?? 'PERCENTAGE')),
     voucher_value:
       typeof voucher.voucher_value === 'string' || typeof voucher.voucher_value === 'number'
         ? voucher.voucher_value
-        : undefined,
-    max_discount: Number(voucher.max_discount ?? 0),
-    min_purchase: Number(voucher.min_purchase ?? 0),
-    cashier_instruction: String(voucher.cashier_instruction || ''),
+        : (typeof voucher.value_amount === 'string' || typeof voucher.value_amount === 'number'
+            ? voucher.value_amount
+            : (typeof voucher.valueAmount === 'string' || typeof voucher.valueAmount === 'number'
+                ? voucher.valueAmount
+                : undefined)),
+    max_discount: Number(voucher.max_discount ?? voucher.maxDiscount ?? 0),
+    min_purchase: Number(voucher.min_purchase ?? voucher.minPurchase ?? 0),
+    voucher_code: voucher.voucher_code ?? voucher.voucherCode,
+    voucher_name: voucher.voucher_name ?? voucher.voucherName,
   };
+};
+
+const mapBackendToFrontendType = (backendType: string): Voucher['voucher_type'] => {
+  const t = String(backendType || '').toUpperCase();
+  if (t === 'DISCOUNT') return 'PERCENTAGE';
+  if (t === 'CASHBACK') return 'FIXED';
+  if (t === 'REDEEM') return 'FREE_ITEM';
+  return 'PERCENTAGE';
+};
+
+const mapFrontendToBackendType = (frontendType: string): string => {
+  const t = String(frontendType || '').toUpperCase();
+  if (t === 'PERCENTAGE') return 'discount';
+  if (t === 'FIXED') return 'cashback';
+  if (t === 'FREE_ITEM') return 'redeem';
+  return 'redeem';
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
   return String(responseMessage || (error instanceof Error ? error.message : fallback));
+};
+
+const getVoucherImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads')) {
+    const baseApiUrl = ((import.meta as any).env?.VITE_GAMIFICATION_API_URL || 'http://localhost:4000').replace(/\/api\/gamification\/?$/, '');
+    return `${baseApiUrl}${imageUrl}`;
+  }
+  return imageUrl;
 };
 
 export default function Vouchers({ role }: VouchersProps) {
@@ -72,6 +105,28 @@ export default function Vouchers({ role }: VouchersProps) {
   const [saving, setSaving] = useState(false);
 
   const isPIC = role === AdminRole.PIC;
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const editingVoucherRef = useRef<any>(null);
+  editingVoucherRef.current = editingVoucher;
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await apiService.uploadVoucherImage(formData);
+      const imageUrl = response.data?.imageUrl;
+      if (imageUrl) {
+        setEditingVoucher({ ...editingVoucherRef.current, image_url: imageUrl });
+        toast.success('Gambar berhasil diupload');
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Gagal upload gambar'));
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     loadVouchers();
@@ -96,16 +151,30 @@ export default function Vouchers({ role }: VouchersProps) {
 
     setSaving(true);
     try {
+      // Generate voucher_code otomatis jika sedang CREATE voucher baru
+      const voucherCode = editingVoucher.id
+        ? (editingVoucher.voucher_code || editingVoucher.code)
+        : (editingVoucher.voucher_code || editingVoucher.code || `VCH_${Date.now()}`);
+
       const payload = {
-        ...editingVoucher,
+        voucher_code: voucherCode,
+        voucher_name: editingVoucher.voucher_name || editingVoucher.title || '',
+        voucher_type: mapFrontendToBackendType(editingVoucher.voucher_type || 'PERCENTAGE'),
         points_cost: Number(editingVoucher.points_cost || 0),
+        value_amount: editingVoucher.voucher_value,
+        description: editingVoucher.description,
         stock: Number(editingVoucher.stock || 0),
         expiry_days: Number(editingVoucher.expiry_days || 0),
+        image_url: editingVoucher.image_url,
         max_discount: Number(editingVoucher.max_discount || 0),
         min_purchase: Number(editingVoucher.min_purchase || 0),
+        is_active: editingVoucher.is_approved,
       };
 
+      console.log('SAVE_PAYLOAD', payload);
+
       if (editingVoucher.id) {
+        console.log('UPDATE_ID', editingVoucher.id);
         await apiService.updateVoucher(editingVoucher.id, payload);
         toast.success('Voucher berhasil diperbarui');
       } else {
@@ -152,10 +221,10 @@ export default function Vouchers({ role }: VouchersProps) {
         </div>
         <button 
           // PERBAIKAN: Set default value untuk field baru saat klik "Rilis Voucher Baru"
-          onClick={() => setEditingVoucher({ 
-            title: '', description: '', points_cost: 0, stock: 0, expiry_days: 30, image_url: '',
-            voucher_type: 'PERCENTAGE', voucher_value: '', min_purchase: 0, max_discount: 0, cashier_instruction: '' 
-          })}
+onClick={() => setEditingVoucher({ 
+             title: '', description: '', points_cost: 0, stock: 0, expiry_days: 30, image_url: '',
+             voucher_type: 'PERCENTAGE', voucher_value: '', min_purchase: 0, max_discount: 0
+           })}
           className="bg-[var(--accent-premium)] hover:bg-orange-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-3 transition-all shadow-xl shadow-orange-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -188,7 +257,7 @@ export default function Vouchers({ role }: VouchersProps) {
             <div key={voucher.id} className="premium-card overflow-hidden group border-orange-100 hover:translate-y-[-4px] transition-all bg-white shadow-lg shadow-orange-100/50">
               <div className="relative aspect-video bg-orange-50 overflow-hidden">
                 <img 
-                  src={voucher.image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop'} 
+                  src={(() => { const s = getVoucherImageUrl(voucher.image_url); console.log('VOUCHER_IMAGE', s); return s; })()}
                   alt={voucher.title}
                   className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1"
                 />
@@ -304,16 +373,15 @@ export default function Vouchers({ role }: VouchersProps) {
                 <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] ml-1">Tipe Sistem Voucher (Kasir)</label>
                 <div className="relative">
                   <List className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
-                  <select 
-                    className="w-full bg-orange-50 border border-orange-200 rounded-2xl pl-12 pr-6 py-3 text-sm font-black text-orange-600 outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner appearance-none cursor-pointer"
-                    value={editingVoucher.voucher_type || 'PERCENTAGE'}
-                    onChange={(e) => setEditingVoucher({...editingVoucher, voucher_type: e.target.value})}
-                  >
-                    <option value="PERCENTAGE">Potongan Diskon Persentase (%)</option>
-                    <option value="FIXED">Potongan Harga Nominal (Rp)</option>
-                    <option value="FREE_ITEM">Klaim Barang Gratis</option>
-                    <option value="CUSTOM">Custom / Instruksi Manual</option>
-                  </select>
+<select 
+                     className="w-full bg-orange-50 border border-orange-200 rounded-2xl pl-12 pr-6 py-3 text-sm font-black text-orange-600 outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner appearance-none cursor-pointer"
+                     value={editingVoucher.voucher_type || 'PERCENTAGE'}
+                     onChange={(e) => setEditingVoucher({...editingVoucher, voucher_type: e.target.value})}
+                   >
+                     <option value="PERCENTAGE">Potongan Diskon Persentase (%)</option>
+                     <option value="FIXED">Potongan Harga Nominal (Rp)</option>
+                     <option value="FREE_ITEM">Klaim Barang Gratis</option>
+                   </select>
                 </div>
               </div>
 
@@ -380,20 +448,7 @@ export default function Vouchers({ role }: VouchersProps) {
                     value={editingVoucher.voucher_value || ''}
                     onChange={(e) => setEditingVoucher({...editingVoucher, voucher_value: e.target.value})}
                   />
-                </div>
-              )}
-
-              {/* DYNAMIC FIELD: JIKA TIPE CUSTOM */}
-              {editingVoucher.voucher_type === 'CUSTOM' && (
-                <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100 space-y-1.5">
-                  <label className="text-[9px] font-black text-rose-600 uppercase tracking-[0.2em] ml-1">Instruksi Khusus untuk Kasir</label>
-                  <textarea 
-                    placeholder="Contoh: Kasir, berikan pelanggan 1 buah payung dan potong manual Rp 5.000 dari total belanja."
-                    className="w-full bg-white border border-rose-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-rose-400 h-20 resize-none text-rose-900"
-                    value={editingVoucher.cashier_instruction || ''}
-                    onChange={(e) => setEditingVoucher({...editingVoucher, cashier_instruction: e.target.value})}
-                  />
-                </div>
+</div>
               )}
               {/* SELESAI BAGIAN DINAMIS */}
 
@@ -435,21 +490,38 @@ export default function Vouchers({ role }: VouchersProps) {
                       value={editingVoucher.expiry_days || 0}
                       onChange={(e) => setEditingVoucher({...editingVoucher, expiry_days: parseInt(e.target.value) || 0})}
                     />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">URL Cover / Gambar</label>
-                  <div className="relative">
-                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-200" />
-                    <input 
-                      type="text"
-                      className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-sm font-medium text-[var(--text-premium)] outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner"
-                      placeholder="https://..."
-                      value={editingVoucher.image_url || ''}
-                      onChange={(e) => setEditingVoucher({...editingVoucher, image_url: e.target.value})}
-                    />
-                  </div>
-                </div>
+</div>
+               </div>
+               <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Gambar Voucher</label>
+                    {editingVoucher.image_url && (
+                      <div className="mb-2 relative">
+                        <img 
+                          src={getVoucherImageUrl(editingVoucher.image_url)}
+                          alt="Voucher Preview" 
+                          className="w-full h-32 object-cover rounded-xl border border-orange-100"
+                        />
+                      </div>
+                    )}
+                   <div className="relative">
+                     <ImagePlus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-200" />
+                     <input 
+                       type="file"
+                       accept="image/*"
+                       disabled={uploadingImage}
+                       onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) handleImageUpload(file);
+                       }}
+                       className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-sm font-medium text-[var(--text-premium)] outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner file:mr-2 file:px-3 file:py-1 file:rounded-lg file:bg-orange-100 file:text-orange-600 file:text-xs file:font-bold"
+                     />
+                     {uploadingImage && (
+                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                         <div className="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+                       </div>
+                     )}
+                   </div>
+                 </div>
               </div>
             </div>
  
