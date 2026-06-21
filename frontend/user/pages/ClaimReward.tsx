@@ -3,8 +3,20 @@ import { useApp } from '../AppContext';
 import { 
   Gift, Clock, Zap, ArrowRight, Ticket, 
   AlertCircle, CalendarDays, 
-  Crown, Sparkles, Star, Search, Percent
+  Crown, Sparkles, Star, Search, Percent, X
 } from 'lucide-react';
+
+const getVoucherImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads')) {
+    const baseApiUrl = ((import.meta as any).env?.VITE_GAMIFICATION_API_URL || 'http://localhost:4000').replace(/\/api\/gamification\/?$/, '');
+    return `${baseApiUrl}${imageUrl}`;
+  }
+  return imageUrl;
+};
 
 const ClaimReward: React.FC = () => {
   const { user, vouchers, myVouchers, claimVoucher, isLoading } = useApp();
@@ -12,6 +24,7 @@ const ClaimReward: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'shop' | 'mine'>('shop');
   const [claimingVoucher, setClaimingVoucher] = useState<string | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<any | null>(null);
 
   const handleClaim = async (v: any) => {
     setClaimingVoucher(v.id);
@@ -201,11 +214,11 @@ const ClaimReward: React.FC = () => {
             {vouchers.map((v, idx) => {
               const canAfford = totalPoints >= v.cost;
               return (
-                <div key={`${v.id}-${idx}`} className="group bg-white border border-slate-100 rounded-[2rem] overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-orange-100/50 transition-all duration-500 hover:-translate-y-2">
+                <div key={`${v.id}-${idx}`} className="group bg-white border border-slate-100 rounded-[2rem] overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-orange-100/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer" onClick={() => setSelectedVoucher(v)}>
                   
                   {/* Dominan Image Area */}
                   <div className="relative h-56 bg-slate-100 overflow-hidden">
-                    <img src={v.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" alt={v.title} />
+                    <img src={getVoucherImageUrl(v.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" alt={v.title} />
                     
                     {/* Dark Gradient Overlay for Contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80"></div>
@@ -219,7 +232,7 @@ const ClaimReward: React.FC = () => {
 
                     {/* Badge / Label Area di bawah gambar */}
                     <div className="absolute bottom-4 left-4 right-4 flex items-end">
-                      {renderVoucherBadge(v) || (
+{renderVoucherBadge(v) || (
                         <span className="bg-gradient-to-r from-orange-500 to-orange-400 text-white border border-orange-300 text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
                           Exclusive
                         </span>
@@ -231,6 +244,7 @@ const ClaimReward: React.FC = () => {
                   <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-5 bg-white">
                     <div className="space-y-3">
                       <h3 className="text-base sm:text-lg font-bold text-slate-800 leading-snug group-hover:text-orange-600 transition-colors line-clamp-2 min-h-[3rem]">{v.title}</h3>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{v.description || 'Tidak ada deskripsi tersedia.'}</p>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50 w-fit px-3 py-1.5 rounded-lg border border-slate-100">
                         <CalendarDays size={14} className="text-orange-400" /> Berlaku s/d {v.expiry}
                       </div>
@@ -284,7 +298,7 @@ const ClaimReward: React.FC = () => {
                     
                     {/* Bagian Kiri (Gambar) */}
                     <div className={`w-full sm:w-48 h-40 sm:h-auto relative shrink-0 overflow-hidden ${v.status !== 'ACTIVE' ? 'grayscale' : ''}`}>
-                      <img src={v.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                      <img src={getVoucherImageUrl(v.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                       <div className="absolute inset-0 bg-black/5"></div>
                     </div>
 
@@ -345,7 +359,7 @@ const ClaimReward: React.FC = () => {
                     <Ticket className="w-10 h-10 text-orange-400" strokeWidth={1.5} />
                   </div>
                   <h3 className="text-xl font-black text-slate-800 mb-2">Belum ada voucher tersimpan</h3>
-                  <p className="text-slate-500 font-medium max-w-sm mb-8 text-sm leading-relaxed">
+<p className="text-slate-500 font-medium max-w-sm mb-8 text-sm leading-relaxed">
                     Tukarkan poinmu pada tab Katalog Promo untuk mendapatkan reward eksklusif.
                   </p>
                   <button 
@@ -359,9 +373,91 @@ const ClaimReward: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
+
+        {/* Modal Detail Voucher */}
+        {selectedVoucher && (
+          <div className="fixed inset-0 bg-black/60 z-[400] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedVoucher(null)}>
+            <div className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="relative">
+                <button 
+                  onClick={() => setSelectedVoucher(null)}
+                  className="absolute top-4 right-4 p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors z-10"
+                >
+                  <X size={18} className="text-slate-600" />
+                </button>
+                
+                <div className="h-56 relative overflow-hidden rounded-t-[2rem]">
+                  <img src={getVoucherImageUrl(selectedVoucher.image)} className="w-full h-full object-cover" alt={selectedVoucher.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                </div>
+
+                <div className="p-6 md:p-8 space-y-5">
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-800">{selectedVoucher.title}</h2>
+                    {renderVoucherBadge(selectedVoucher)}
+                  </div>
+
+                  <p className="text-sm text-slate-600 leading-relaxed">{selectedVoucher.description || 'Tidak ada deskripsi tersedia.'}</p>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tipe Voucher</p>
+                      <p className="text-sm font-black text-slate-800">{selectedVoucher.voucher_type || 'REGULAR'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nilai Voucher</p>
+                      <p className="text-sm font-black text-slate-800">
+                        {selectedVoucher.voucher_type === 'PERCENTAGE' ? `${selectedVoucher.voucher_value}%` :
+                         selectedVoucher.voucher_type === 'FIXED' ? `Rp ${Number(selectedVoucher.voucher_value).toLocaleString()}` :
+                         selectedVoucher.voucher_type === 'FREE_ITEM' ? 'Gratis Item' : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Poin Dibutuhkan</p>
+                      <p className="text-sm font-black text-orange-600">{selectedVoucher.cost?.toLocaleString() ?? 0} PTS</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Masa Berlaku</p>
+                      <p className="text-sm font-black text-slate-800">{selectedVoucher.expiry}</p>
+                    </div>
+                    {selectedVoucher.min_purchase > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Min. Belanja</p>
+                        <p className="text-sm font-black text-slate-800">Rp {selectedVoucher.min_purchase?.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedVoucher.max_discount > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Maks. Diskon</p>
+                        <p className="text-sm font-black text-slate-800">Rp {selectedVoucher.max_discount?.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      handleClaim(selectedVoucher);
+                      setSelectedVoucher(null);
+                    }}
+                    disabled={totalPoints < selectedVoucher.cost || claimingVoucher === selectedVoucher.id}
+                    className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-[1.2rem] text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {claimingVoucher === selectedVoucher.id ? (
+                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Memproses...</>
+                    ) : totalPoints < selectedVoucher.cost ? (
+                      <><AlertCircle size={14} /> Poin Tidak Cukup</>
+                    ) : (
+                      <>Tukar Sekarang <ArrowRight size={14} /></>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+         )}
+       </div>
+     </div>
+   );
+ };
 
 export default ClaimReward;

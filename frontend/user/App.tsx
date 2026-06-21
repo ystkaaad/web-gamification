@@ -8,6 +8,7 @@ import ClaimReward from './pages/ClaimReward';
 import AffiliateClaimReward from './pages/AffiliateClaimReward';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import BottomNav from './components/BottomNav';
+import NotificationToast from './components/NotificationToast';
 import Login from './pages/Login';
 import Profile from './pages/Profile'; 
 import { X, Sparkles, Bell, Home, Target, Gift, Users, User, LogOut, Zap, ChevronDown, Settings, Shield } from 'lucide-react';
@@ -143,6 +144,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col text-slate-800">
+      <NotificationToast />
       <TopNavbar />
       
       {/* Mobile Top Header */}

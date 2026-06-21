@@ -3,6 +3,18 @@ import React, { useState } from 'react';
 import { useApp } from '../AppContext';
 import { Gift, Wallet, Clock, Ticket, CheckCircle, Search, Filter } from 'lucide-react';
 
+const getVoucherImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads')) {
+    const baseApiUrl = ((import.meta as any).env?.VITE_GAMIFICATION_API_URL || 'http://localhost:4000').replace(/\/api\/gamification\/?$/, '');
+    return `${baseApiUrl}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 const Marketplace: React.FC = () => {
   const { user, vouchers, myVouchers, claimVoucher, isLoading } = useApp();
   const totalPoints = user?.points || 0;
@@ -84,7 +96,7 @@ const Marketplace: React.FC = () => {
           {vouchers.map((v, idx) => (
             <div key={`${v.id}-${idx}`} className="bg-white rounded-[1.8rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col group">
               <div className="h-40 relative overflow-hidden">
-                <img src={v.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={v.title} />
+                <img src={getVoucherImageUrl(v.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={v.title} />
                 <div className="absolute top-3 left-3 bg-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black text-white shadow-xl">
                   {v.cost?.toLocaleString() ?? 0} PTS
                 </div>
@@ -121,7 +133,7 @@ const Marketplace: React.FC = () => {
             myVouchers.map((v, i) => (
               <div key={i} className="bg-white p-5 rounded-[1.8rem] border border-orange-100 flex items-center gap-6 shadow-sm hover:shadow-lg transition-all">
                 <div className="w-24 h-24 shrink-0 bg-slate-100 rounded-[1.2rem] overflow-hidden shadow-inner">
-                  <img src={v.image} className="w-full h-full object-cover" alt={v.title} />
+                  <img src={getVoucherImageUrl(v.image)} className="w-full h-full object-cover" alt={v.title} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base font-black text-slate-900 mb-1 truncate">{v.title}</h3>

@@ -6,6 +6,18 @@ import {
   TrendingUp, Star, Shield, Gem, Percent, Sparkles
 } from 'lucide-react';
 
+const getVoucherImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/uploads')) {
+    const baseApiUrl = ((import.meta as any).env?.VITE_GAMIFICATION_API_URL || 'http://localhost:4000').replace(/\/api\/gamification\/?$/, '');
+    return `${baseApiUrl}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 const AffiliateClaimReward: React.FC = () => {
   const { user, claimVoucher, myVouchers, vouchers, isLoading } = useApp();
   const totalPoints = user?.points ?? 0;
@@ -108,7 +120,7 @@ const AffiliateClaimReward: React.FC = () => {
                   
                   {/* Image Container with Inner Padding Style */}
                   <div className="relative w-full sm:w-48 h-56 sm:h-auto rounded-[2rem] overflow-hidden shrink-0 bg-slate-50">
-                    <img src={v.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" alt={v.title} />
+                    <img src={getVoucherImageUrl(v.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" alt={v.title} />
                     {/* Overlay Gradient on Hover */}
                     <div className="absolute inset-0 bg-gradient-to-t from-orange-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     

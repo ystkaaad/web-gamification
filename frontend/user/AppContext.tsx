@@ -21,6 +21,7 @@ interface AppContextType {
   isSyncing: boolean;
   isLoading: boolean;
   lastSyncStatus: 'success' | 'error' | 'idle';
+  notifications: Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -57,6 +58,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [referralMembers, setReferralMembers] = useState<ReferralMember[]>([]);
   const [referralHistory, setReferralHistory] = useState<ReferralTransaction[]>([]);
   const [games, setGames] = useState<Game[]>([]);
+  const [notifications, setNotifications] = useState<Array<{ id: number; message: string; type: 'success' | 'error' | 'info' }>>([]);
 
   const syncRef = useRef(false);
 
@@ -67,7 +69,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info') => {
-    console.log(`[Notification] ${type.toUpperCase()}: ${message}`);
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 4000);
   }, []);
 
   // ==========================================
@@ -199,38 +205,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 // TODO: Integrasi backend voucher setelah endpoint tersedia
        const vouchersRes = await apiService.getVouchers().catch(() => ({ data: [] }));
        const vouchersData = unwrapData<any[]>(vouchersRes).map((v: any) => ({
-         id: v.id,
-         title: v.voucher_name ?? v.title ?? '',
+         id: v.voucherCode ?? v.voucher_code ?? v.id,
+         title: v.voucherName ?? v.voucher_name ?? v.title ?? '',
          description: v.description ?? '',
-         cost: v.points_cost ?? v.cost ?? 0,
-         image: v.image_url ?? v.image ?? '',
-         expiry: v.expiry_days ?? v.expiry ?? '',
-         code: v.voucher_code ?? v.code ?? '',
+         cost: v.pointsCost ?? v.points_cost ?? v.cost ?? 0,
+         image: v.imageUrl ?? v.image_url ?? v.image ?? '',
+         expiry: v.expiryDays ?? v.expiry_days ?? v.expiry ?? '',
+         code: v.voucherCode ?? v.voucher_code ?? v.code ?? '',
          status: v.status ?? '',
-         voucher_type: v.voucher_type,
-         voucher_value: v.voucher_value,
-         max_discount: v.max_discount ?? 0,
-         min_purchase: v.min_purchase ?? 0,
+         voucher_type: v.voucherType ?? v.voucher_type,
+         voucher_value: v.valueAmount ?? v.voucher_value,
+         max_discount: v.maxDiscount ?? v.max_discount ?? 0,
+         min_purchase: v.minPurchase ?? v.min_purchase ?? 0,
          cashier_instruction: v.cashier_instruction ?? '',
          is_approved: v.is_approved,
          stock: v.stock ?? 0,
        }));
        setVouchers(vouchersData || []);
-        
+         
        const myVouchersRes = await apiService.getUserVouchers().catch(() => ({ data: [] }));
        const myVouchersData = unwrapData<any[]>(myVouchersRes).map((v: any) => ({
-         id: v.id,
-         title: v.voucher_name ?? v.title ?? '',
+         id: v.voucherCode ?? v.voucher_code ?? v.id,
+         title: v.voucherName ?? v.voucher_name ?? v.title ?? '',
          description: v.description ?? '',
-         cost: v.points_cost ?? v.cost ?? 0,
-         image: v.image_url ?? v.image ?? '',
-         expiry: v.expiry_days ?? v.expiry ?? '',
-         code: v.voucher_code ?? v.code ?? '',
+         cost: v.pointsCost ?? v.points_cost ?? v.cost ?? 0,
+         image: v.imageUrl ?? v.image_url ?? v.image ?? '',
+         expiry: v.expiryDays ?? v.expiry_days ?? v.expiry ?? '',
+         code: v.voucherCode ?? v.voucher_code ?? v.code ?? '',
          status: v.status ?? '',
-         voucher_type: v.voucher_type,
-         voucher_value: v.voucher_value,
-         max_discount: v.max_discount ?? 0,
-         min_purchase: v.min_purchase ?? 0,
+         voucher_type: v.voucherType ?? v.voucher_type,
+         voucher_value: v.valueAmount ?? v.voucher_value,
+         max_discount: v.maxDiscount ?? v.max_discount ?? 0,
+         min_purchase: v.minPurchase ?? v.min_purchase ?? 0,
          cashier_instruction: v.cashier_instruction ?? '',
          is_approved: v.is_approved,
          stock: v.stock ?? 0,
@@ -566,7 +572,7 @@ const logout = () => {
       user, transactions, missions, vouchers, myVouchers, 
       referralHistory, referralMembers, games, isSyncing, isLoading, lastSyncStatus,
       setUser, login, logout, updateUser, checkIn, completeMission, addPoints, claimVoucher, processMemberTransaction, refreshData ,
-      setPointsAndStreak, calculateMemberLevel, addNotification
+      setPointsAndStreak, calculateMemberLevel, addNotification, notifications
     }}>
       {children}
     </AppContext.Provider>
