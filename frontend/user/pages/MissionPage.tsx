@@ -10,7 +10,7 @@ import {
   ArrowRight, Sparkles, Target, X,
   LayoutGrid, ListTodo, Calendar,
   Lock, AlertTriangle, Coins,
-  Check
+  Check, ShoppingCart, Package
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Spinwheel from '../components/Spinwheel';
@@ -36,7 +36,7 @@ interface StreakConfig {
 }
 
 const MissionPage: React.FC = () => {
-  const { user, addPoints, isLoading: appLoading, missions, setPointsAndStreak, games: ctxGames, checkIn, completeMission } = useApp();
+  const { user, addPoints, isLoading: appLoading, missions, setPointsAndStreak, games: ctxGames, checkIn, completeMission, isSyncing, refreshData } = useApp();
   const navigate = useNavigate();
   
   // States
@@ -316,58 +316,78 @@ try {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {missions.map((m, idx) => (
-            <div 
-              key={`${m.id}-${idx}`}
-              className={`bg-white border p-6 rounded-[2rem] space-y-6 transition-all group shadow-sm hover:shadow-md ${m.completed ? 'border-green-100 opacity-70' : 'border-orange-50 hover:border-orange-200'}`}
-            >
-              <div className="flex justify-between items-start">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${m.completed ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
-                  {m.completed ? <CheckCircle2 size={20} /> : <Zap size={20} />}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {missions.map((m, idx) => (
+                 <div 
+                   key={`${m.id}-${idx}`}
+                   className={`bg-white border p-6 rounded-[2rem] space-y-6 transition-all group shadow-sm hover:shadow-md ${m.status === 'CLAIMED' ? 'border-green-100 opacity-70' : 'border-orange-50 hover:border-orange-200'}`}
+                 >
+                   <div className="flex justify-between items-start">
+                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${m.status === 'CLAIMED' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
+                       {m.status === 'CLAIMED' ? <CheckCircle2 size={20} /> : <Zap size={20} />}
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <div className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-orange-100 flex items-center gap-1">
+                         {m.missionType === 'CHECKIN' && <Calendar size={12} />}
+                         {m.missionType === 'TRANSACTION' && <ShoppingCart size={12} />}
+                         {m.missionType === 'PRODUCT_PURCHASE' && <Package size={12} />}
+                         <span className="ml-1">{m.missionType === 'CHECKIN' ? 'CHECK-IN' : m.missionType === 'TRANSACTION' ? 'TRANSAKSI' : m.missionType === 'PRODUCT_PURCHASE' ? 'PRODUK' : '-'}</span>
+                       </div>
+                       <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                         (Number(m.progress ?? 0) >= Number(m.target ?? 0) && m.status !== 'CLAIMED') ? 'bg-green-50 text-green-600 border-green-100' :
+                         m.status === 'CLAIMED' ? 'bg-slate-100 text-slate-400 border-slate-200' :
+                         'bg-blue-50 text-blue-600 border-blue-100'
+                       }`}>
+                         {(Number(m.progress ?? 0) >= Number(m.target ?? 0) && m.status !== 'CLAIMED') ? 'SIAP DIKLAIM' : m.status === 'CLAIMED' ? 'SUDAH DIKLAIM' : 'SEDANG BERJALAN'}
+                       </div>
+                     </div>
+                   </div>
+                  
+<div>
+                      <h3 className={`text-lg font-black ${m.status === 'CLAIMED' ? 'text-slate-400' : (Number(m.progress ?? 0) >= Number(m.target ?? 0) ? 'text-green-700' : 'text-slate-900')}`}>{m.title}</h3>
+                      <p className="text-slate-500 text-xs font-medium mt-1">{m.description}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-[10px] font-medium">
+                      <Gift size={14} className="text-orange-500" />
+                      <span className="text-slate-500">Hadiah:</span>
+                      <span className="font-black text-orange-600">{Number(m.rewardPoints ?? 0)} Poin</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                     <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                       <span>Progress</span>
+                       <span className="text-slate-900">{Number(m.progress ?? 0)} / {Number(m.target ?? 0)}</span>
+                     </div>
+                     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                       <div 
+                         className={`h-full transition-all duration-1000 ${m.status === 'CLAIMED' ? 'bg-green-500' : (Number(m.progress ?? 0) >= Number(m.target ?? 0) ? 'bg-green-500' : 'bg-orange-400')}`}
+                         style={{ width: `${Math.min(100, ((m.progress ?? 0) / (m.target ?? 1)) * 100)}%` }}
+                       ></div>
+                     </div>
+                   </div>
+                  
+<button 
+                      disabled={(Number(m.progress ?? 0) < Number(m.target ?? 0)) || m.status === 'CLAIMED' || isSyncing}
+                      onClick={() => {
+                        if (typeof m.id === 'string' || typeof m.id === 'number') {
+                          if (Number(m.progress ?? 0) >= Number(m.target ?? 0) && m.status !== 'CLAIMED') {
+                            completeMission(String(m.id));
+                          }
+                        }
+                      }}
+                      className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        m.status === 'CLAIMED' || isSyncing
+                          ? 'bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed' 
+                          : Number(m.progress ?? 0) >= Number(m.target ?? 0)
+                            ? 'bg-orange-400 text-white hover:bg-orange-500 shadow-lg shadow-orange-100 active:scale-95 border-none' 
+                            : 'bg-white border border-slate-100 text-slate-400 opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      {m.status === 'CLAIMED' ? 'SUDAH DIKLAIM' : isSyncing ? 'MEMPROSES...' : (Number(m.progress ?? 0) >= Number(m.target ?? 0)) ? 'KLAIM HADIAH' : 'PROSES'}
+                    </button>
                 </div>
-<div className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-orange-100">
-                   +{Number(m.rewardPoints ?? m.reward_points ?? 0)} PTS
-                 </div>
-              </div>
-              
-              <div>
-                <h3 className={`text-lg font-black ${m.completed ? 'text-slate-400' : 'text-slate-900'}`}>{m.title}</h3>
-                <p className="text-slate-500 text-xs font-medium mt-1">{m.description}</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <span>Progress</span>
-                  <span className="text-slate-900">{Number(m.progress ?? m.progress ?? 0)} / {Number(m.total ?? m.target ?? 0)}</span>
-                </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${m.completed ? 'bg-green-500' : 'bg-orange-400'}`}
-                    style={{ width: `${Math.min(100, ((m.progress ?? 0) / (m.total ?? m.target ?? 1)) * 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <button 
-                disabled={m.completed || (m.progress ?? 0) < (m.total ?? m.target ?? 0)}
-                onClick={() => {
-                  if (typeof m.id === 'string' || typeof m.id === 'number') {
-                    completeMission(String(m.id));
-                  }
-                }}
-                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  m.completed 
-                  ? 'bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed' 
-                  : ((m.progress ?? 0) >= (m.total ?? m.target ?? 0)
-                    ? 'bg-orange-400 text-white hover:bg-orange-500 shadow-lg shadow-orange-100 active:scale-95 border-none' 
-                    : 'bg-white border border-slate-100 text-slate-400 opacity-50 cursor-not-allowed')
-                }`}
-              >
-                {m.completed ? 'Selesai' : ((m.progress ?? 0) >= (m.total ?? m.target ?? 0) ? 'Klaim Hadiah!' : 'Proses')}
-              </button>
-            </div>
-          ))}
+              ))}
           {missions.length === 0 && (
             <div className="md:col-span-3 bg-slate-50 border border-dashed border-slate-200 rounded-[3rem] p-16 text-center text-slate-400 italic">
                Tidak ada misi aktif saat ini.

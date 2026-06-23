@@ -19,41 +19,86 @@ import {
   Type,
   Layers,
   Package,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Calendar,
+  ShoppingCart
 } from 'lucide-react';
 import { apiService, unwrapData } from '../services/apiService';
 import { Mission } from '../types';
 import { toast } from 'react-hot-toast';
 
+type MissionType = 'CHECKIN' | 'STREAK' | 'TRANSACTION' | 'PRODUCT_PURCHASE';
+
 type MissionRecord = Partial<Mission> & {
   rewardPoints?: unknown;
+  reward_points?: unknown;
   status?: unknown;
-  itemCode?: unknown;
-  item_code?: unknown;
-  targetAmount?: unknown;
-  target_amount?: unknown;
+  productCode?: unknown;
+  product_code?: unknown;
   target?: unknown;
+  missionType?: unknown;
   type?: unknown;
 };
 
+const defaultMissionForm: Partial<Mission> = {
+  title: '',
+  description: '',
+  missionType: 'CHECKIN',
+  rewardPoints: 0,
+  target: 1,
+  productCode: '',
+  status: 'IN_PROGRESS'
+};
+
+const normalizeMissionType = (value: unknown): MissionType => {
+  if (value === 'CHECKIN' || value === 'STREAK' || value === 'TRANSACTION' || value === 'PRODUCT_PURCHASE') {
+    return value;
+  }
+
+  if (value === 'ONE_TIME') {
+    return 'CHECKIN';
+  }
+
+  if (value === 'PROGRESS') {
+    return 'TRANSACTION';
+  }
+
+  return 'CHECKIN';
+};
+
+const getLegacyConfig = (mission: MissionRecord) => {
+  try {
+    return typeof mission.config_data === 'string' ? JSON.parse(mission.config_data) : {};
+  } catch {
+    return {};
+  }
+};
+
 const normalizeMission = (mission: MissionRecord, index: number): Mission => {
-  const configData =
-    typeof mission.config_data === 'string'
-      ? mission.config_data
-      : JSON.stringify({
-          type: String(mission.type || 'ONE_TIME'),
-          itemCode: String(mission.itemCode || mission.item_code || ''),
-          targetAmount: Number(mission.targetAmount ?? mission.target_amount ?? mission.target ?? 1),
-        });
-  const isActive = mission.is_active as unknown;
+  const legacyConfig = getLegacyConfig(mission);
+  const missionType = normalizeMissionType(mission.missionType ?? mission.type ?? legacyConfig.type);
+  const rewardPoints = Number(mission.rewardPoints ?? mission.reward_points ?? 0);
+
+  let targetValue = Number(mission.target);
+  if (!targetValue || targetValue <= 0) {
+    targetValue = Number(legacyConfig.targetAmount ?? legacyConfig.target ?? 1);
+  }
+
+  const productCode = String(mission.productCode ?? mission.product_code ?? '');
+  const status = mission.status ?? 'IN_PROGRESS';
 
   return {
     id: String(mission.id || `mission-${index}`),
     title: String(mission.title || ''),
     description: String(mission.description || ''),
-    reward_points: Number(mission.reward_points ?? mission.rewardPoints ?? 0),
-    is_active: isActive === true || String(isActive) === 'true' || mission.status === 'active',
-    config_data: configData,
+    missionType,
+    rewardPoints,
+    target: targetValue || 1,
+    productCode,
+    status: status as 'IN_PROGRESS' | 'COMPLETED' | 'CLAIMED',
+    reward_points: rewardPoints,
+    is_active: mission.is_active === true,
+    config_data: mission.config_data,
   };
 };
 
@@ -66,28 +111,28 @@ export default function Missions() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingMission, setEditingMission] = useState<Partial<Mission> | null>(null);
+  const [editingMission, setEditingMission] = useState<MissionRecord | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Helper for config_data
-  const getConfig = (configData?: string) => {
-    try {
-      return configData ? JSON.parse(configData) : { type: 'ONE_TIME' };
-    } catch (e) {
-      return { type: 'ONE_TIME' };
+  // Helper to get form values - supports both new and legacy format
+  const getMissionFormValue = (key: keyof Mission): string | number => {
+    if (!editingMission) return '';
+    if (key === 'missionType') {
+      return normalizeMissionType(editingMission.missionType ?? editingMission.type);
     }
+    if (key === 'rewardPoints') {
+      return Number(editingMission.rewardPoints ?? editingMission.reward_points ?? 0);
+    }
+    if (key === 'target') {
+      return Number(editingMission.target ?? 1);
+    }
+    if (key === 'productCode') {
+      return String(editingMission.productCode ?? editingMission.product_code ?? '');
+    }
+    return String(editingMission[key] ?? '');
   };
 
-  const updateConfig = (field: string, value: any) => {
-    if (!editingMission) return;
-    const currentConfig = getConfig(editingMission.config_data);
-    const newConfig = { ...currentConfig, [field]: value };
-    setEditingMission({ ...editingMission, config_data: JSON.stringify(newConfig) });
-  };
-
-  useEffect(() => {
-    loadMissions();
-  }, []);
+  const getMissionProductCode = () => String(editingMission?.productCode ?? editingMission?.product_code ?? '');
 
   const loadMissions = async () => {
     try {
@@ -100,40 +145,52 @@ export default function Missions() {
     }
   };
 
-const handleSaveMission = async () => {
-  if (!editingMission?.title || !editingMission?.description) {
-    toast.error('Judul dan deskripsi wajib diisi');
-    return;
-  }
+  useEffect(() => {
+    loadMissions();
+  }, []);
 
-  setSaving(true);
-  try {
-    const payload = {
-      ...editingMission,
-      reward_points: Number(editingMission.reward_points || 0),
-      is_active: editingMission.is_active !== false,
-    } as Mission;
-
-    if (editingMission.id) {
-      await apiService.updateMission(editingMission.id, payload as unknown as Record<string, unknown>);
-      toast.success('Misi berhasil diperbarui');
-    } else {
-      await apiService.createMission(payload as unknown as Record<string, unknown>);
-      toast.success('Misi baru berhasil dibuat');
+  const handleSaveMission = async () => {
+    if (!editingMission?.title || !editingMission?.description) {
+      toast.error('Judul dan deskripsi wajib diisi');
+      return;
     }
-    await loadMissions();
-    setEditingMission(null);
-  } catch (error) {
-    console.error("Save mission error:", error);
-    toast.error(getErrorMessage(error, 'Gagal menyimpan misi'));
-  } finally {
-    setSaving(false);
-  }
-};
+
+    setSaving(true);
+    try {
+      const payload: Pick<Mission, 'title' | 'description' | 'missionType' | 'rewardPoints' | 'target' | 'productCode' | 'status'> = {
+        title: editingMission.title ?? '',
+        description: editingMission.description ?? '',
+        missionType: normalizeMissionType(editingMission.missionType),
+        rewardPoints: Number(editingMission.rewardPoints ?? editingMission.reward_points ?? 0),
+        target: Number(editingMission.target ?? 1),
+        productCode: String(editingMission.productCode ?? editingMission.product_code ?? ''),
+        status: editingMission.status ?? 'IN_PROGRESS',
+      };
+
+      if (editingMission.id) {
+        await apiService.updateMission(editingMission.id, payload);
+        toast.success('Misi berhasil diperbarui');
+      } else {
+        await apiService.createMission(payload);
+        toast.success('Misi baru berhasil dibuat');
+      }
+      await loadMissions();
+      setEditingMission(null);
+    } catch (error) {
+      console.error("Save mission error:", error);
+      toast.error(getErrorMessage(error, 'Gagal menyimpan misi'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleMissionStatus = async (mission: Mission) => {
     try {
-      await apiService.updateMission(mission.id, { ...mission, is_active: !mission.is_active } as unknown as Record<string, unknown>);
+      await apiService.updateMission(mission.id, { 
+        ...mission, 
+        is_active: !mission.is_active,
+        status: mission.is_active ? 'IN_PROGRESS' : 'COMPLETED'
+      } as unknown as Record<string, unknown>);
       toast.success('Status misi berhasil diperbarui');
       await loadMissions();
     } catch (error) {
@@ -159,6 +216,8 @@ const handleSaveMission = async () => {
     m.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const selectedMissionType = getMissionFormValue('missionType') as MissionType;
+
   return (
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -167,7 +226,7 @@ const handleSaveMission = async () => {
           <p className="text-sm text-[var(--text-muted-premium)] font-medium tracking-wide">Desain tantangan untuk meningkatkan retensi dan engagement pengguna.</p>
         </div>
         <button 
-          onClick={() => setEditingMission({ title: '', description: '', reward_points: 0, is_active: true, config_data: JSON.stringify({ type: 'ONE_TIME', itemCode: '', targetAmount: 1 }) })}
+          onClick={() => setEditingMission(defaultMissionForm)}
           className="bg-[var(--accent-premium)] hover:bg-orange-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-3 transition-all shadow-xl shadow-orange-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -214,12 +273,30 @@ const handleSaveMission = async () => {
                       </button>
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-2">
                         <Zap className="w-3.5 h-3.5 text-amber-500" />
-                        {mission.reward_points} Poin
+                        {mission.rewardPoints ?? mission.reward_points} Poin
                       </span>
-                      {getConfig(mission.config_data).type === 'PROGRESS' && (
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center gap-2">
-                          <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                          Progressive: {getConfig(mission.config_data).targetAmount}x {getConfig(mission.config_data).itemCode}
+                      {mission.missionType === 'CHECKIN' && (
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                          Target Check-in: {mission.target}x
+                        </span>
+                      )}
+                      {mission.missionType === 'STREAK' && (
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                          Target Streak: {mission.target}x
+                        </span>
+                      )}
+                      {mission.missionType === 'TRANSACTION' && (
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-green-50 text-green-600 border border-green-100 flex items-center gap-2">
+                          <ShoppingCart className="w-3.5 h-3.5 text-green-500" />
+                          Target Transaksi: {mission.target}x
+                        </span>
+                      )}
+                      {mission.missionType === 'PRODUCT_PURCHASE' && (
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-100 flex items-center gap-2">
+                          <Package className="w-3.5 h-3.5 text-purple-500" />
+                          Produk: {mission.productCode || '-'} | Target Pembelian: {mission.target}x
                         </span>
                       )}
                     </div>
@@ -280,14 +357,14 @@ const handleSaveMission = async () => {
                 <XCircle className="w-6 h-6 text-orange-200" />
               </button>
             </div>
- 
+  
             <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Judul Misi</label>
                 <input 
                   type="text"
                   className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-[var(--text-premium)] outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner"
-                  placeholder="Contoh: Sang Penjelajah Hari Ini"
+                  placeholder="Contoh: Check-in Harian"
                   value={editingMission.title}
                   onChange={(e) => setEditingMission({...editingMission, title: e.target.value})}
                 />
@@ -310,8 +387,8 @@ const handleSaveMission = async () => {
                     <input 
                       type="number"
                       className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-black text-amber-600 outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner"
-                      value={editingMission.reward_points}
-                      onChange={(e) => setEditingMission({...editingMission, reward_points: parseInt(e.target.value) || 0})}
+                      value={getMissionFormValue('rewardPoints')}
+                      onChange={(e) => setEditingMission({...editingMission, rewardPoints: parseInt(e.target.value) || 0})}
                     />
                   </div>
                 </div>
@@ -321,48 +398,107 @@ const handleSaveMission = async () => {
                     <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400" />
                     <select 
                       className="w-full bg-orange-50/30 border border-orange-100 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold text-[var(--text-premium)] outline-none focus:border-orange-400 focus:bg-white transition-all shadow-inner appearance-none cursor-pointer"
-                      value={getConfig(editingMission.config_data).type}
-                      onChange={(e) => updateConfig('type', e.target.value)}
-                    >
-                      <option value="ONE_TIME">Sekali Selesai (One-time)</option>
-                      <option value="PROGRESS">Berkelanjutan (Progress-based)</option>
+                      value={getMissionFormValue('missionType')}
+onChange={(e) => {
+                         const nextMissionType = normalizeMissionType(e.target.value);
+                         setEditingMission({
+                           ...editingMission,
+                           missionType: nextMissionType,
+                           productCode: nextMissionType === 'PRODUCT_PURCHASE' ? String(getMissionFormValue('productCode')) : ''
+                         });
+                       }}
+                     >
+                      <option value="CHECKIN">Check-in Harian</option>
+                      <option value="STREAK">Daily Streak</option>
+                      <option value="TRANSACTION">Transaksi</option>
+                      <option value="PRODUCT_PURCHASE">Pembelian Produk</option>
                     </select>
                   </div>
                 </div>
               </div>
- 
-              {getConfig(editingMission.config_data).type === 'PROGRESS' && (
+
+              {/* Dynamic Fields Based on Mission Type */}
+              {selectedMissionType === 'CHECKIN' && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Target Check-in</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400" />
+                    <input 
+                      type="number"
+                      className="w-full bg-white border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black text-blue-600 outline-none focus:border-orange-400 transition-all shadow-sm"
+                      placeholder="5"
+                      value={getMissionFormValue('target')}
+                      onChange={(e) => setEditingMission({...editingMission, target: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {selectedMissionType === 'STREAK' && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Target Streak</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-orange-400" />
+                    <input 
+                      type="number"
+                      className="w-full bg-white border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black text-orange-600 outline-none focus:border-orange-400 transition-all shadow-sm"
+                      placeholder="3"
+                      value={getMissionFormValue('target')}
+                      onChange={(e) => setEditingMission({...editingMission, target: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {selectedMissionType === 'TRANSACTION' && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Jumlah Transaksi</label>
+                  <div className="relative">
+                    <ShoppingCart className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-green-400" />
+                    <input 
+                      type="number"
+                      className="w-full bg-white border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black text-green-600 outline-none focus:border-orange-400 transition-all shadow-sm"
+                      placeholder="3"
+                      value={getMissionFormValue('target')}
+                      onChange={(e) => setEditingMission({...editingMission, target: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {selectedMissionType === 'PRODUCT_PURCHASE' && (
                 <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Kode Item Target</label>
+                    <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Produk Target</label>
                     <div className="relative">
                       <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400" />
                       <input 
                         type="text"
                         className="w-full bg-white border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black text-blue-600 outline-none focus:border-orange-400 transition-all shadow-sm"
-                        placeholder="BAKSO_MALANG_SP"
-                        value={getConfig(editingMission.config_data).itemCode || ''}
-                        onChange={(e) => updateConfig('itemCode', e.target.value)}
+                        placeholder="Kode Produk (mis: BAKSO_MALANG_SP)"
+                        value={String(getMissionFormValue('productCode'))}
+                        onChange={(e) => setEditingMission({...editingMission, productCode: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Jumlah Target</label>
+                    <label className="text-[9px] font-black text-[var(--text-muted-premium)] uppercase tracking-[0.2em] ml-1">Jumlah Pembelian</label>
                     <div className="relative">
                       <ArrowUpCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400" />
                       <input 
                         type="number"
                         className="w-full bg-white border border-orange-100 rounded-2xl pl-12 pr-4 py-3 text-xs font-black text-emerald-600 outline-none focus:border-orange-400 transition-all shadow-sm"
                         placeholder="3"
-                        value={getConfig(editingMission.config_data).targetAmount || 1}
-                        onChange={(e) => updateConfig('targetAmount', parseInt(e.target.value) || 1)}
+                        value={getMissionFormValue('target')}
+                        onChange={(e) => setEditingMission({...editingMission, target: parseInt(e.target.value) || 1})}
                       />
                     </div>
                   </div>
                 </div>
               )}
+
             </div>
- 
+  
             <div className="p-6 border-t border-orange-50 bg-orange-50/30 flex gap-4">
               <button 
                 onClick={() => setEditingMission(null)}

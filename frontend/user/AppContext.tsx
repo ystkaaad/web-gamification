@@ -9,6 +9,43 @@ const unwrapData = <T,>(response: any): T => {
   return response?.data?.data ?? response?.data ?? ([] as unknown as T);
 };
 
+type MissionType = 'CHECKIN' | 'TRANSACTION' | 'PRODUCT_PURCHASE';
+
+const normalizeMissionType = (value: unknown): MissionType => {
+  if (value === 'CHECKIN' || value === 'TRANSACTION' || value === 'PRODUCT_PURCHASE') {
+    return value;
+  }
+  if (value === 'ONE_TIME') return 'CHECKIN';
+  if (value === 'PROGRESS') return 'TRANSACTION';
+  return 'CHECKIN';
+};
+
+const normalizeMissionStatus = (status: unknown): 'IN_PROGRESS' | 'COMPLETED' | 'CLAIMED' => {
+  const normalized = String(status || '').toUpperCase();
+  if (normalized === 'COMPLETED') return 'COMPLETED';
+  if (normalized === 'CLAIMED') return 'CLAIMED';
+  return 'IN_PROGRESS';
+};
+
+const normalizeMission = (m: any, prog?: any): Mission => {
+  const missionType = normalizeMissionType(m.missionType ?? m.type);
+  const status = normalizeMissionStatus(prog?.status ?? m.status);
+  console.log('MISSION MERGED', { missionId: m.id, progress: prog?.progress, status, prog });
+  return {
+    id: m.id ?? m.missionId ?? '',
+    title: m.title ?? '',
+    description: m.description ?? '',
+    missionType,
+    rewardPoints: Number(m.rewardPoints ?? m.reward_points ?? 0),
+    target: Number(m.target ?? prog?.target ?? 1),
+    productCode: m.productCode ?? m.product_code ?? '',
+    status,
+    progress: Number(prog?.progress ?? 0),
+    completed: status === 'CLAIMED',
+    is_active: m.is_active ?? true,
+  };
+};
+
 interface AppContextType {
   user: User | null;
   transactions: Transaction[];
@@ -105,7 +142,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         apiService.getMissions().catch(() => ({ data: [] })),
         apiService.getGames().catch(() => ({ data: [] })),
         apiService.getPointsHistory().catch(() => ({ data: [] })),
-        apiService.getUserMissions().catch(() => ({ data: [] }))
+        apiService.getUserMissions(activeUser.id).catch(() => ({ data: [] }))
       ]);
 
       const profileData = unwrapData<any>(profileRes);
@@ -113,6 +150,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const gamesData = unwrapData<any[]>(gamesRes);
       const historyData = unwrapData<any[]>(historyRes);
       const userMissionData = unwrapData<any[]>(userMissionRes);
+
+      console.log('MISSION RESPONSE', userMissionData);
 
       let latestUser = activeUser;
 
@@ -175,13 +214,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const baseMissions = missionsData || [];
       const progressData = userMissionData || [];
       const mergedMissions = baseMissions.map((m: any) => {
-        const prog = progressData.find((p: any) => p.missionId === m.id);
-        return {
-          ...m,
-          progress: prog?.progress || 0,
-          completed: prog?.isCompleted || false
-        };
+        const prog = progressData.find((p: any) => p.missionId === m.id || p.id === m.missionId);
+        return normalizeMission(m, prog);
       });
+      
+      mergedMissions.forEach(m => {
+        console.log('MISSION STATUS', { id: m.id, progress: m.progress, target: m.target, status: m.status });
+      });
+      
       setMissions(mergedMissions);
 
 // Pengecekan referral HANYA menggunakan state `latestUser` yang pasti sudah ternormalisasi 
@@ -476,8 +516,12 @@ const logout = () => {
   const completeMission = async (missionId: string) => {
     if (!user) return;
     setIsSyncing(true);
+    console.log('CLAIM PAYLOAD', {
+      userId: user.id,
+      missionId: missionId
+    });
     try {
-      await apiService.completeMission(missionId);
+      await apiService.completeMission(missionId, user.id);
       addNotification(`Misi Selesai!`, 'success');
       await refreshData();
     } catch (error: any) {

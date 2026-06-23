@@ -81,11 +81,11 @@ export const apiService = {
   getMissions: () =>
     api.get('/missions'),
 
-  getUserMissions: () =>
-    api.get('/user-missions'),
+  getUserMissions: (userId: string) =>
+    api.get('/user-missions', { params: { userId } }),
 
-  completeMission: (missionId: string) =>
-    api.post('/user-missions/complete', { missionId }),
+  completeMission: (missionId: string, userId: string) =>
+    api.post('/user-missions/complete', { missionId, userId }),
 
   // ================= GAMES =================
   getGames: () =>

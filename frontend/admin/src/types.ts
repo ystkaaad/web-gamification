@@ -79,8 +79,14 @@ export interface Mission {
   id: string;
   title: string;
   description: string;
-  reward_points: number;
-  is_active: boolean;
+  missionType?: 'CHECKIN' | 'STREAK' | 'TRANSACTION' | 'PRODUCT_PURCHASE';
+  rewardPoints?: number;
+  target?: number;
+  productCode?: string;
+  status?: 'IN_PROGRESS' | 'COMPLETED' | 'CLAIMED';
+  // Legacy fields for backward compatibility
+  reward_points?: number;
+  is_active?: boolean;
   config_data?: string;
 }
 

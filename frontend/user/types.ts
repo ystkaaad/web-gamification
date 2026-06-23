@@ -55,12 +55,16 @@ export interface Mission {
   id?: string | number;
   title?: string;
   description?: string;
-  completed: boolean;
+  completed?: boolean;
   progress?: number;
   total?: number;
   target?: number;
   rewardPoints?: number;
   reward_points?: number;
+  missionType?: 'CHECKIN' | 'TRANSACTION' | 'PRODUCT_PURCHASE';
+  productCode?: string;
+  status?: 'IN_PROGRESS' | 'COMPLETED' | 'CLAIMED';
+  is_active?: boolean;
 }
 
 export interface Voucher {
