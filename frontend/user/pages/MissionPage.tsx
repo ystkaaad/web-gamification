@@ -69,7 +69,7 @@ const MissionPage: React.FC = () => {
 
   const activeGame = games.find(g => g.id === showGame);
 
-  const handlePlay = async (gameId: string) => {
+const handlePlay = async (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game || !user) return;
 
@@ -89,7 +89,7 @@ const MissionPage: React.FC = () => {
     setIsPlaying(true);
     setGameResult(null);
 
-try {
+    try {
       const cooldownCheckRes = await apiService.checkGameCooldown(game.id);
       const cooldownCheck = cooldownCheckRes.data;
       if (!cooldownCheck.allowed) {
@@ -98,7 +98,9 @@ try {
         return;
       }
 
-      const segments = Array.isArray(game.config_data) ? game.config_data : [];
+      let segments = Array.isArray(game.config_data) 
+        ? game.config_data 
+        : (typeof game.config_data === 'string' ? (() => { try { return JSON.parse(game.config_data); } catch { return []; } })() : []);
 
       if (segments.length === 0) {
         setErrorModal('Hadiah game belum dikonfigurasi oleh admin. Silakan coba game lain.');
@@ -106,33 +108,7 @@ try {
         return;
       }
 
-      const segmentsCount = segments.length || 6;
-
-      const getSegmentProbability = (segment: Record<string, unknown>) =>
-        Number(segment.probability ?? segment.Probability ?? segment.probabilitas ?? 0) || 0;
-
-      const getRandomReward = (rewards: any[]) => {
-        const totalProb = rewards.reduce((acc, s) => acc + getSegmentProbability(s), 0);
-        if (totalProb <= 0) return rewards[Math.floor(Math.random() * rewards.length)];
-        let random = Math.random() * totalProb;
-        for (const segment of rewards) {
-          const prob = getSegmentProbability(segment);
-          if (random < prob) return segment;
-          random -= prob;
-        }
-        return rewards[rewards.length - 1];
-      };
-
-      const winReward = getRandomReward(segments);
-      const idx = segments.indexOf(winReward);
-      const segmentAngle = 360 / segmentsCount;
-      const targetStopAngle = 360 - (idx * segmentAngle);
-      const extraSpins = 5 * 360;
-      const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
-      setRotation(nextRotation);
-
-      // Use spinGame for SPINWHEEL type
-      const playResponse = await apiService.spinGame(game.id);
+      const playResponse = await apiService.spinGame(user!.id, game.id);
       const playData = playResponse.data;
 
       if (!playData?.success) {
@@ -142,10 +118,20 @@ try {
       }
 
       const backendResult = playData.data;
-      const prizeLabel = backendResult?.prizeLabel ?? winReward.Label ?? winReward.label ?? 'Zonk';
-      const prizeValue = Number(backendResult?.rewardValue ?? winReward.Value ?? winReward.value ?? 0) || 0;
-      const prizeType = backendResult?.rewardType ?? (prizeValue > 0 ? 'POINTS' : 'ZONK');
+      const prizeLabel = backendResult?.prizeLabel ?? 'Zonk';
+      const prizeValue = Number(backendResult?.rewardValue ?? backendResult?.prizeValue ?? 0) || 0;
+      const prizeType = backendResult?.rewardType ?? backendResult?.prizeType ?? 'POINT';
+      const selectedIdx = backendResult?.selectedIndex ?? backendResult?.prizeId ?? 0;
+      const segmentsCount = segments.length;
+      const segmentAngle = 360 / segmentsCount;
+      const targetStopAngle = 270 - ((selectedIdx + 0.5) * segmentAngle);
+      const extraSpins = 5 * 360;
+      const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
+      setRotation(nextRotation);
+
       const isVoucher = prizeType === 'VOUCHER';
+      const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
+      const isZonk = prizeType === 'POINT' && numericValue === 0 && !isVoucher;
 
       const message = isVoucher
         ? `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`
@@ -153,11 +139,20 @@ try {
           ? `Selamat! Anda memenangkan ${prizeLabel}`
           : 'Yah, coba lagi lain kali ya!';
 
+      // Wait for wheel animation to complete
+      await new Promise(r => setTimeout(r, 4500));
+
+      // Refresh user data after spin completes
+      if (typeof refreshData === 'function') {
+        await refreshData();
+      }
+
       setGameResult({
         success: true,
         prizeLabel,
         prizeValue,
         prizeType,
+        isZonk,
         message,
       });
 

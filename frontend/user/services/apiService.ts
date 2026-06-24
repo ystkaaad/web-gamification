@@ -91,8 +91,8 @@ export const apiService = {
   getGames: () =>
     api.get('/games'),
 
-  spinGame: (gameId: string) =>
-    api.post('/games/spin', { gameId }),
+  spinGame: (userId: string, gameId: string) =>
+    api.post('/games/spin', { userId, gameId }),
 
   scratchGame: (gameId: string) =>
     api.post('/games/scratch', { gameId }),

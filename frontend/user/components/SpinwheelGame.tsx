@@ -19,7 +19,6 @@ interface SpinwheelGameProps {
 }
 
 const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUser }) => {
-  // Menggunakan addNotification bawaan Anda sebagai pengganti react-hot-toast
   const { user, addNotification, refreshData } = useApp(); 
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameResult, setGameResult] = useState<any>(null);
@@ -39,12 +38,10 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
     setIsPlaying(true);
     setGameResult(null);
 
-try {
-      // [PERBAIKAN]: MEMANGGIL API BACKEND UNTUK MENGUNDI (ANTI-CHEAT)
-      const response: any = await apiService.spinGame(game.id);
+    try {
+      const response: any = await apiService.spinGame(user.id, game.id);
       const resData = response?.data?.data;
       
-      // Validasi jika backend belum tersedia
       if (!response?.data?.success) {
         addNotification(
           response?.data?.message ?? 'Game sedang dalam pengembangan',
@@ -54,14 +51,12 @@ try {
         return;
       }
       
-      // Validasi data hadiah ada
       if (!resData) {
         addNotification('Tidak ada data hadiah dari server', 'error');
         setIsPlaying(false);
         return;
       }
 
-      // 2. Parsing config_data untuk mencocokkan jumlah potongan roda
       let segments = [];
       try {
         segments = Array.isArray(game.config_data) 
@@ -72,8 +67,7 @@ try {
       }
       const segmentsCount = segments.length || 6;
       
-      // 3. Kalkulasi Animasi (Math) dengan nilai aman
-      const selectedIdx = resData?.selectedIndex ?? 0;
+      const selectedIdx = resData?.selectedIndex ?? resData?.prizeId ?? 0;
       const segmentAngle = 360 / segmentsCount;
       const targetStopAngle = 270 - ((selectedIdx + 0.5) * segmentAngle); 
       const extraSpins = 8 * 360; 
@@ -85,25 +79,22 @@ try {
       const nextRotation = rotation + extraSpins + angleDiff;
       setRotation(nextRotation);
       
-      // Tunggu animasi roda berhenti (4.5 detik sesuai durasi di Spinwheel component)
       await new Promise(r => setTimeout(r, 4500));
-
-      // 4. Update UI & Refresh Saldo Poin
+      
       if (typeof refreshData === 'function') {
-         refreshData(); 
+        await refreshData();
       } else if (typeof onUpdateUser === 'function') {
-         onUpdateUser();
+        onUpdateUser();
       }
 
-      // [PERBAIKAN]: Cek kemenangan berdasarkan Tipe atau Angka (menangani Voucher Teks)
       const prizeLabel = resData?.prizeLabel ?? 'Tidak ada hadiah';
-      const prizeValue = Number(resData?.prizeValue ?? resData?.rewardValue ?? 0);
       const rewardType = resData?.rewardType ?? resData?.prizeType ?? 'POINT';
       const isVoucher = rewardType === 'VOUCHER';
+      const prizeValue = Number(resData?.prizeValue ?? resData?.rewardValue ?? (isVoucher ? resData?.voucherValue ?? 0 : 0));
+      const finalPoints = Number(resData?.finalPoints ?? resData?.newPoints ?? 0);
       const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
       const isZonk = rewardType === 'POINT' && numericValue === 0 && !isVoucher;
 
-      // Hapus deklarasi colors agar tidak ada error charCodeAt
       if (!isZonk) {
         confetti({
           particleCount: 150,
@@ -112,7 +103,6 @@ try {
         });
       }
 
-      // [PERBAIKAN TERBARU]: Mengganti kata "Katalog" menjadi "Koleksi"
       let resultMessage = 'Yah, coba lagi lain kali ya!';
       if (isVoucher) {
         resultMessage = `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`;
@@ -125,7 +115,8 @@ try {
         prizeValue,
         rewardType,
         isZonk,
-        message: resultMessage
+        message: resultMessage,
+        finalPoints
       });
 
     } catch (err: any) {
@@ -137,35 +128,35 @@ try {
   };
 
   return (
-    <div className="fixed inset-0 bg-white/95 z-[500] flex items-center justify-center p-6 backdrop-blur-xl">
+    <div className="fixed inset-0 bg-white/95 z-[500] flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white w-full max-w-md rounded-[3rem] p-10 border border-orange-100 shadow-2xl relative overflow-hidden"
+        className="bg-white w-full max-w-[420px] md:max-w-md my-4 rounded-[3rem] p-6 md:p-8 border border-orange-100 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 blur-[60px] rounded-full"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-50 blur-[60px] rounded-full"></div>
+        <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-orange-50 blur-[60px] rounded-full"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-orange-50 blur-[60px] rounded-full"></div>
         
         <button 
           onClick={onClose} 
-          className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 transition-colors"
+          className="absolute top-4 right-4 md:top-8 md:right-8 text-slate-400 hover:text-slate-900 transition-colors z-20"
           disabled={isPlaying}
         >
-          <X size={24} />
+          <X size={20} className="md:w-6 md:h-6" />
         </button>
 
-        <div className="text-center space-y-8 relative z-10">
+        <div className="text-center space-y-6 md:space-y-8 relative z-10">
           <div className="space-y-2">
-            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">{game.name}</h2>
-            <div className="flex items-center justify-center gap-2 text-orange-400 text-[10px] font-black uppercase tracking-widest">
-              <Sparkles size={12} />
+            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-900">{game.name}</h2>
+            <div className="flex items-center justify-center gap-2 text-orange-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest">
+              <Sparkles size={10} className="md:w-3 md:h-3" />
               <span>Lucky Play Mode</span>
-              <Sparkles size={12} />
+              <Sparkles size={10} className="md:w-3 md:h-3" />
             </div>
           </div>
 
-          <div className="flex justify-center py-4">
+          <div className="flex justify-center py-2 md:py-4">
             <Spinwheel 
               configData={game.config_data} 
               rotation={rotation} 
@@ -173,61 +164,64 @@ try {
             />
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <AnimatePresence mode="wait">
               {gameResult ? (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-orange-50 border border-orange-100 rounded-2xl p-6 space-y-4"
+                  className="bg-orange-50 border border-orange-100 rounded-2xl p-4 md:p-6 space-y-3 md:space-y-4"
                 >
                   <div className="flex justify-center -mt-2">
                     {gameResult.rewardType === 'VOUCHER' ? (
-                      <div className="w-12 h-12 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center"><Ticket size={24} /></div>
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-100 text-indigo-500 rounded-full flex items-center justify-center"><Ticket size={20} className="md:w-6 md:h-6" /></div>
                     ) : gameResult.isZonk ? (
-                      <div className="w-12 h-12 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center"><Frown size={24} /></div>
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center"><Frown size={20} className="md:w-6 md:h-6" /></div>
                     ) : (
-                      <div className="w-12 h-12 bg-orange-200 text-orange-600 rounded-full flex items-center justify-center"><Trophy size={24} /></div>
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-200 text-orange-600 rounded-full flex items-center justify-center"><Trophy size={20} className="md:w-6 md:h-6" /></div>
                     )}
                   </div>
 
-                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.3em]">Game Selesai</p>
-                  <h3 className="text-2xl font-black text-slate-900 italic">{gameResult.prizeLabel}</h3>
-                  <p className="text-slate-500 text-xs font-medium px-2">{gameResult.message}</p>
+                  <p className="text-orange-600 text-[9px] md:text-xs font-black uppercase tracking-wider">Poin Didapat: +{gameResult.prizeValue.toLocaleString()}</p>
+                  <p className="text-slate-500 text-[9px] md:text-xs font-medium px-2">Total Poin: {gameResult.finalPoints?.toLocaleString() ?? 0}</p>
+                  
+                  <p className="text-[9px] md:text-[10px] font-black text-orange-600 uppercase tracking-[0.3em]">Game Selesai</p>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 italic">{gameResult.prizeLabel}</h3>
+                  <p className="text-slate-500 text-[9px] md:text-xs font-medium px-2">{gameResult.message}</p>
                   
                   <button 
                     onClick={onClose}
-                    className="w-full py-4 bg-orange-400 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-orange-500 transition-all shadow-md shadow-orange-100"
+                    className="w-full py-3 md:py-4 bg-orange-400 text-white rounded-xl font-black uppercase text-[9px] md:text-xs tracking-widest hover:bg-orange-500 transition-all shadow-md shadow-orange-100"
                   >
                     Tutup Game
                   </button>
                 </motion.div>
               ) : (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
-                        <Coins size={20} />
+                <div className="space-y-3 md:space-y-4">
+                  <div className="bg-slate-50 rounded-2xl p-3 md:p-4 flex items-center justify-between border border-slate-100">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
+                        <Coins size={16} className="md:w-5 md:h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Saldo Poin</p>
-                        <p className="text-lg font-black text-slate-900 tabular-nums">{user?.points?.toLocaleString() ?? 0}</p>
+                        <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">Saldo Poin</p>
+                        <p className="text-base md:text-lg font-black text-slate-900 tabular-nums">{user?.points?.toLocaleString() ?? 0}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Biaya Main</p>
-                       <p className="text-lg font-black text-orange-600 tabular-nums">-{Math.round(Number(game.cost_points) || 0)}</p>
+                       <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">Biaya Main</p>
+                       <p className="text-base md:text-lg font-black text-orange-600 tabular-nums">-{Math.round(Number(game.cost_points) || 0)}</p>
                     </div>
                   </div>
 
                   <button 
                     disabled={isPlaying || (user && Math.round(Number(user.points) || 0) < Math.round(Number(game.cost_points) || 0))}
                     onClick={handlePlay}
-                    className="w-full py-5 bg-orange-400 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-orange-100 active:scale-95 transition-all disabled:opacity-50"
+                    className="w-full py-4 md:py-5 bg-orange-400 text-white rounded-2xl font-black text-[10px] md:text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-orange-100 active:scale-95 transition-all disabled:opacity-50"
                   >
                     {isPlaying ? (
-                      <span className="flex items-center justify-center gap-3">
-                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><RotateCw size={18} /></motion.div>
+                      <span className="flex items-center justify-center gap-2 md:gap-3">
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><RotateCw size={16} className="md:w-4.5 md:h-5" /></motion.div>
                         Sistem Memutar...
                       </span>
                     ) : 'PUTAR SEKARANG'}

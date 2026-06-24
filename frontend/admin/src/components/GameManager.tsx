@@ -55,10 +55,7 @@ const normalizeGame = (game: Record<string, unknown>, index: number): GameSettin
     type: normalizedType,
     cost_points: Number(game.cost_points ?? game.costPoints ?? 0),
     reward_points: Number(game.reward_points ?? game.rewardPoints ?? 0),
-    config_data:
-      typeof game.config_data === 'string'
-        ? game.config_data
-        : JSON.stringify(game.config_data ?? {}),
+    config_data: game.config_data ?? (Array.isArray(game.prizes) ? game.prizes : []),
     is_active:
       game.is_active === true ||
       game.is_active === 'true' ||
@@ -94,7 +91,8 @@ export default function GameManager() {
   useEffect(() => {
     if (editingGame) {
       try {
-        const data = JSON.parse(editingGame.config_data || '[]');
+        const configData = editingGame.config_data;
+        const data = typeof configData === 'string' ? JSON.parse(configData || '[]') : Array.isArray(configData) ? configData : [];
         
         if (editingGame.type === 'SPINWHEEL') {
           let initialSegments = Array.isArray(data) ? data : [];
@@ -117,11 +115,11 @@ export default function GameManager() {
           }
           setRewards(initialRewards.slice(0, 5));
         } else if (editingGame.type === 'DAILY_STREAK') {
-          const config = JSON.parse(editingGame.config_data || '{}');
+          const config = (typeof configData === 'object' && !Array.isArray(configData) ? configData : JSON.parse((editingGame.config_data as string) || '{}'));
           setDailyStreakConfig({
-            baseReward: config.baseReward || 100,
-            streakBonus: config.streakBonus || 1000,
-            maxDays: config.maxDays || 7
+            baseReward: (config as any)?.baseReward || 100,
+            streakBonus: (config as any)?.streakBonus || 1000,
+            maxDays: (config as any)?.maxDays || 7
           });
         }
       } catch (e) {
@@ -216,7 +214,7 @@ export default function GameManager() {
     setRewards(newRewards);
   };
 
-  const handleUpdateGame = async (updatedGame: Partial<GameSetting>) => {
+const handleUpdateGame = async (updatedGame: Partial<GameSetting>) => {
     if (updatedGame.type === 'SPINWHEEL') {
       const totalProb = segments.reduce((acc, seg) => acc + (Number(seg.probability) || 0), 0);
       if (totalProb !== 100) {
@@ -228,14 +226,18 @@ export default function GameManager() {
     setSaving(true);
     try {
       const type = updatedGame.type?.toUpperCase() || '';
-      const staticId = type === 'SPINWHEEL' ? 'spinwheel' : 
-                       type === 'SCRATCHCARD' ? 'scratchcard' : 
-                       type === 'DAILY_STREAK' ? 'daily_streak' : updatedGame.id;
-
+      // Only use staticId for new games, keep original UUID for updates
+      const useStaticId = !updatedGame.id;
       let finalGame = { 
         ...updatedGame, 
-        id: staticId,
-        is_active: updatedGame.is_active ?? true
+        // Preserve original UUID for updates, use static for new games
+        id: useStaticId 
+          ? (type === 'SPINWHEEL' ? 'spinwheel' : 
+             type === 'SCRATCHCARD' ? 'scratchcard' : 
+             type === 'DAILY_STREAK' ? 'daily_streak' : undefined)
+          : updatedGame.id,
+        // Preserve is_active from editingGame or use existing value
+        is_active: updatedGame.is_active ?? editingGame?.is_active ?? true
       };
       
       if (finalGame.type === 'SPINWHEEL') {
@@ -243,12 +245,11 @@ export default function GameManager() {
           ...seg,
           label: seg.label || String(seg.value)
         }));
-        finalGame.config_data = JSON.stringify(syncedSegments);
-        finalGame.reward_points = 0; 
+        finalGame.config_data = syncedSegments;
       } else if (finalGame.type === 'SCRATCHCARD') {
-        finalGame.config_data = JSON.stringify(rewards);
+        finalGame.config_data = rewards;
       } else if (finalGame.type === 'DAILY_STREAK') {
-        finalGame.config_data = JSON.stringify(dailyStreakConfig);
+        finalGame.config_data = dailyStreakConfig;
       }
 
       if (updatedGame.id) {
@@ -271,16 +272,13 @@ export default function GameManager() {
 
   const toggleGameStatus = async (game: GameSetting) => {
     try {
-      const type = game.type?.toUpperCase() || '';
-      const staticId = type === 'SPINWHEEL' ? 'spinwheel' : 
-                       type === 'SCRATCHCARD' ? 'scratchcard' : 
-                       type === 'DAILY_STREAK' ? 'daily_streak' : game.id;
+      // Preserve original UUID for update
+      await apiService.updateGame(game.id, { ...game, is_active: !game.is_active });
       
-      const updatedStatus = !game.is_active;
+      // Update local state immediately for instant UI feedback
+      setGames(prev => prev.map(g => g.id === game.id ? { ...g, is_active: !game.is_active } : g));
       
-      await apiService.updateGame(staticId, { ...game, id: staticId, is_active: updatedStatus });
-      
-      toast.success(`Game ${game.name} ${updatedStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
+      toast.success(`Game ${game.name} ${!game.is_active ? 'diaktifkan' : 'dinonaktifkan'}`);
       await loadGames();
     } catch (error) {
       toast.error(getErrorMessage(error, 'Gagal memperbarui status game'));

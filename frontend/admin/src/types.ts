@@ -131,7 +131,7 @@ export interface GameSetting {
   type: 'SPINWHEEL' | 'DAILY_STREAK' | 'SCRATCHCARD';
   cost_points: number;
   reward_points: number;
-  config_data: string;
+  config_data: unknown;
   is_active: boolean;
 }
 

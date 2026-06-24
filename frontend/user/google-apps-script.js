@@ -12,7 +12,9 @@ const HEADERS = {
   POINTS_HISTORY: ["id", "userId", "source", "pointsChange", "description", "createdAt"],
   VOUCHER_HISTORY: ["id", "userId", "voucherId", "voucherCode", "transactionId", "discountAmount", "usedAt"],
   MISSION_PROGRESS: ["id", "missionId", "userId", "currentProgress", "isCompleted", "completedAt"],
-  REFERRAL_EARNINGS: ["id", "affiliateId", "memberId", "transactionId", "commission", "createdAt"]
+  REFERRAL_EARNINGS: ["id", "affiliateId", "memberId", "transactionId", "commission", "createdAt"],
+  GAMES: ["id", "name", "type", "cost_points", "reward_points", "config_data", "is_active", "start_date", "end_date"],
+  GAME_PLAYS: ["id", "userId", "gameId", "gameType", "costPoints", "rewardPoints", "prizeLabel", "rewardType", "createdAt"],
 };
 
 function doGet(e) {
@@ -73,16 +75,25 @@ function doPost(e) {
       case "UPDATE_MISSION":
         return processMissionUpdate(ss, payload);
 
-      case "CLAIM_STREAK":
-        return processStreakClaim(ss, payload);
+case "CLAIM_STREAK":
+         return processStreakClaim(ss, payload);
 
-      case "dailyCheckIn":
-        // Alias for streak or custom logic
-        return processStreakClaim(ss, payload);
-      
-      case "addPoints":
-      case "UPDATE_POINTS":
-        return processAddPoints(ss, payload);
+       case "dailyCheckIn":
+         // Alias for streak or custom logic
+         return processStreakClaim(ss, payload);
+
+       case "PLAY_SPINWHEEL":
+         return processPlaySpinwheel(ss, payload);
+
+       case "CHECK_GAME_COOLDOWN":
+         return processCheckGameCooldown(ss, payload);
+
+       case "addPoints":
+       case "UPDATE_POINTS":
+         return processAddPoints(ss, payload);
+
+       case "PLAY_GAME":
+         return processPlaySpinwheel(ss, payload);
 
       default:
         return jsonResponse({ success: false, error: "Unknown type: " + type, received: type });
