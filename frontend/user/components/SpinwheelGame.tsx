@@ -68,8 +68,13 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       const segmentsCount = segments.length || 6;
       
       const selectedIdx = resData?.selectedIndex ?? resData?.prizeId ?? 0;
+      console.log('=== SPIN RUNTIME DEBUG ===');
+      console.log('SELECTED INDEX', selectedIdx);
+      console.log('SEGMENTS LENGTH', segments.length);
+      console.log('SEGMENTS', segments);
+      console.log('SEGMENT SELECTED', segments[selectedIdx]);
       const segmentAngle = 360 / segmentsCount;
-      const targetStopAngle = 270 - ((selectedIdx + 0.5) * segmentAngle); 
+      const targetStopAngle = ((selectedIdx + 0.5) * segmentAngle) - 90; 
       const extraSpins = 8 * 360; 
       
       const currentMod = rotation % 360;
@@ -77,6 +82,14 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       if (angleDiff <= 0) angleDiff += 360; 
       
       const nextRotation = rotation + extraSpins + angleDiff;
+      console.log('SPIN VISUAL DEBUG', {
+        selectedIdx,
+        segmentAngle,
+        targetStopAngle,
+        rotation,
+        nextRotation,
+        segments
+      });
       setRotation(nextRotation);
       
       await new Promise(r => setTimeout(r, 4500));
@@ -92,8 +105,7 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       const isVoucher = rewardType === 'VOUCHER';
       const prizeValue = Number(resData?.prizeValue ?? resData?.rewardValue ?? (isVoucher ? resData?.voucherValue ?? 0 : 0));
       const finalPoints = Number(resData?.finalPoints ?? resData?.newPoints ?? 0);
-      const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
-      const isZonk = rewardType === 'POINT' && numericValue === 0 && !isVoucher;
+      const isZonk = Number(prizeValue) <= 0 && rewardType !== 'VOUCHER';
 
       if (!isZonk) {
         confetti({
@@ -106,12 +118,14 @@ const SpinwheelGame: React.FC<SpinwheelGameProps> = ({ game, onClose, onUpdateUs
       let resultMessage = 'Yah, coba lagi lain kali ya!';
       if (isVoucher) {
         resultMessage = `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`;
-      } else if (!isZonk) {
-        resultMessage = `Selamat! Saldo Anda bertambah sebesar ${prizeLabel}.`;
+      } else if (prizeValue > 0) {
+        resultMessage = `Selamat! Saldo Anda bertambah sebesar ${prizeValue} Poin.`;
+      } else if (isZonk) {
+        resultMessage = 'Yah, zonk! Coba lagi nanti.';
       }
 
       setGameResult({
-        prizeLabel: isZonk ? 'YAH, ZONK!' : prizeLabel,
+        prizeLabel,
         prizeValue,
         rewardType,
         isZonk,

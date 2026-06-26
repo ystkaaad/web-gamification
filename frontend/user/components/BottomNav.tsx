@@ -13,6 +13,7 @@ const BottomNav: React.FC = () => {
         { to: '/commissions', icon: Zap, label: 'Komisi' },
         { to: '/referrals', icon: Users, label: 'Jaringan' },
         { to: '/rewards', icon: Gift, label: 'Elite' },
+        { to: '/missions', icon: Target, label: 'Misi' },
       ]
     : [
         { to: '/dashboard', icon: Home, label: 'Home' },

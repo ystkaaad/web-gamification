@@ -25,7 +25,7 @@ const AffiliateClaimReward: React.FC = () => {
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // Rewards dikosongkan untuk diatur via Admin
-  const affiliateRewards = vouchers.filter(v => v.title.toLowerCase().includes('elite') || v.title.toLowerCase().includes('partner'));
+  const affiliateRewards = vouchers;
 
   const handleClaim = async (v: any) => {
     setClaimingId(v.id);
@@ -133,16 +133,54 @@ const AffiliateClaimReward: React.FC = () => {
                   </div>
 
                   {/* Content Container */}
-                  <div className="flex-1 py-4 sm:py-6 px-2 sm:px-4 flex flex-col justify-between gap-6">
-                    <div>
-                      <h3 className="text-xl font-black text-slate-800 tracking-tight leading-snug mb-3 group-hover:text-orange-500 transition-colors">{v.title}</h3>
-                      <div className="inline-flex items-center gap-2 bg-orange-50/80 rounded-xl px-3 py-2 border border-orange-100/50">
-                        <div className="bg-orange-500 p-1.5 rounded-lg text-white shadow-sm">
-                          <Zap size={12} />
-                        </div>
-                        <span className="text-sm font-black text-orange-600">{v.cost.toLocaleString()} PTS</span>
-                      </div>
-                    </div>
+<div className="flex-1 py-4 sm:py-6 px-2 sm:px-4 flex flex-col justify-between gap-6">
+                     <div>
+                       <h3 className="text-xl font-black text-slate-800 tracking-tight leading-snug mb-3 group-hover:text-orange-500 transition-colors">{v.title}</h3>
+                       {v.description && (
+                         <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">{v.description}</p>
+                       )}
+                       
+                       <div className="grid grid-cols-2 gap-2 mb-4">
+                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">💰 Nilai Voucher</p>
+                           <p className="text-xs font-black text-slate-800">
+                             {v.voucher_type === 'PERCENTAGE' ? `${v.voucher_value}%` : 
+                              v.voucher_type === 'FIXED' ? `Rp ${Number(v.voucher_value).toLocaleString()}` : 
+                              v.voucher_type === 'FREE_ITEM' ? 'Gratis Item' : '-'}
+                           </p>
+                         </div>
+{(v.min_purchase ?? 0) > 0 && (
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">🛒 Minimal Belanja</p>
+                              <p className="text-xs font-black text-slate-800">Rp {v.min_purchase?.toLocaleString()}</p>
+                            </div>
+                          )}
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-2 mb-4">
+                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">🎫 Jenis Voucher</p>
+                           <p className="text-xs font-black text-orange-600">{v.voucher_type || 'REGULER'}</p>
+                         </div>
+                         <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                           <p className="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">⭐ Harga Tukar</p>
+                           <p className="text-xs font-black text-orange-600">{v.cost?.toLocaleString() ?? 0} Poin</p>
+                         </div>
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-2 mb-4">
+                         {(v as any).stock !== undefined && (
+                           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">📦 Stok</p>
+                             <p className="text-xs font-black text-slate-800">{(v as any).stock} Voucher</p>
+                           </div>
+                         )}
+                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">⏳ Berlaku</p>
+                           <p className="text-xs font-black text-slate-800">{v.expiry ? `${v.expiry} Hari` : '-'}</p>
+                         </div>
+                       </div>
+                     </div>
                     
                     <button 
                       onClick={() => handleClaim(v)} 
@@ -176,21 +214,78 @@ const AffiliateClaimReward: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myVouchers.length > 0 ? myVouchers.map((v, i) => (
-              <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 flex flex-col gap-6 group hover:border-orange-300 transition-all shadow-sm hover:shadow-xl hover:shadow-orange-500/10 hover:-translate-y-1 relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                
-                <div className="flex items-start gap-4 relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/30">
-                    <Ticket size={24} />
+            {myVouchers.length > 0 ? myVouchers.map((v, i) => {
+              const statusInfo = v.status === 'ACTIVE' ? { bg: 'bg-emerald-50', text: 'text-emerald-600', label: 'Aktif' } : 
+                               v.status === 'USED' ? { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Sudah Digunakan' } :
+                               v.status === 'EXPIRED' ? { bg: 'bg-rose-50', text: 'text-rose-600', label: 'Kadaluarsa' } :
+                               { bg: 'bg-slate-100', text: 'text-slate-500', label: 'Tidak Aktif' };
+              
+              return (
+                <div key={v.id || i} className="group bg-white rounded-[2.5rem] p-6 border border-slate-100 hover:border-orange-200 shadow-sm hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-500 hover:-translate-y-1 relative overflow-hidden flex flex-col gap-5">
+                  <div className="absolute -right-4 -top-4 w-20 h-20 bg-gradient-to-br from-orange-50 to-orange-100 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
+                  
+                  <div className="flex items-start gap-4 relative z-10">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/30">
+                      <Ticket size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md mb-2 inline-block ${statusInfo.bg} ${statusInfo.text}`}>
+                        {statusInfo.label}
+                      </span>
+                      <h4 className="font-black text-slate-800 text-lg leading-tight group-hover:text-orange-500 transition-colors">{v.title}</h4>
+                      {v.description && (
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{v.description}</p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-2 py-1 rounded-md mb-2 inline-block">Aktif</span>
-                    <h4 className="font-black text-slate-800 text-lg leading-tight group-hover:text-orange-500 transition-colors">{v.title}</h4>
-                  </div>
+                  
+<div className="space-y-3 relative z-10">
+                     <div className="grid grid-cols-2 gap-2 mb-4">
+                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">💰 Nilai Voucher</p>
+                         <p className="text-xs font-black text-slate-800">
+                           {v.voucher_type === 'PERCENTAGE' ? `${v.voucher_value}%` : 
+                            v.voucher_type === 'FIXED' ? `Rp ${Number(v.voucher_value).toLocaleString()}` : 
+                            v.voucher_type === 'FREE_ITEM' ? 'Gratis Item' : '-'}
+                         </p>
+                       </div>
+{(v.min_purchase ?? 0) > 0 && (
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">🛒 Minimal Belanja</p>
+                            <p className="text-xs font-black text-slate-800">Rp {v.min_purchase?.toLocaleString()}</p>
+                          </div>
+                        )}
+                     </div>
+                     
+                     <div className="grid grid-cols-2 gap-2 mb-4">
+                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">⏳ Berlaku</p>
+                         <p className="text-xs font-black text-slate-800">{v.expiry ? `${v.expiry} Hari` : '-'}</p>
+                       </div>
+                       <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                         <p className="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-1">🎫 Jenis</p>
+                         <p className="text-xs font-black text-orange-600">{v.voucher_type || 'REGULER'}</p>
+                       </div>
+                     </div>
+                     
+                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 mb-3">
+                       <span>⭐ Poin Didapat: {v.cost?.toLocaleString() ?? 0}</span>
+                     </div>
+                     
+                     <div className="flex items-center justify-between">
+                       <div>
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tanggal Klaim</p>
+                         <p className="text-xs font-black text-slate-700">{(v as any).created_at ? new Date((v as any).created_at).toLocaleDateString('id-ID') : '-'}</p>
+                       </div>
+                       <div className="text-right">
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Kode</p>
+                         <p className="font-mono text-sm font-black text-orange-600 tracking-widest">{v.code ? String(v.code).substring(0, 8) : '******'}</p>
+                       </div>
+                     </div>
+                   </div>
                 </div>
-              </div>
-            )) : (
+              );
+            }) : (
               <div className="col-span-full py-24 flex flex-col items-center justify-center text-center bg-white rounded-[3rem] border border-dashed border-orange-200 shadow-sm">
                 <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-6">
                   <Ticket size={40} />

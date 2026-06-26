@@ -91,16 +91,39 @@ export const apiService = {
   getGames: () =>
     api.get('/games'),
 
-  spinGame: (userId: string, gameId: string) =>
-    api.post('/games/spin', { userId, gameId }),
+  spinGame: (userId: string, gameId: string) => {
+    console.log('API SPIN REQUEST', { userId, gameId });
+    return api.post('/games/spin', { userId, gameId });
+  },
 
-  scratchGame: (gameId: string) =>
-    api.post('/games/scratch', { gameId }),
+scratchGame: (userId: string, gameId: string) => {
+    console.log('SCRATCH REQUEST TYPE', {
+      method: 'POST',
+      body: {
+        userId,
+        gameId
+      }
+    });
+    return api.post(
+      '/games/scratch',
+      {
+        userId,
+        gameId
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  },
 
-  checkGameCooldown: (gameId: string) =>
-    api.get('/games/cooldown', {
-      params: { gameId },
-    }),
+  checkGameCooldown: (userId: string, gameId: string) => {
+    console.log('COOLDOWN REQUEST', { userId, gameId });
+    return api.get('/games/cooldown', {
+      params: { userId, gameId },
+    });
+  },
 
   // ================= HISTORY =================
   getPointsHistory: () =>

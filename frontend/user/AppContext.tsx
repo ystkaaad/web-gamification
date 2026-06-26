@@ -156,12 +156,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let latestUser = activeUser;
 
       if (profileData && Object.keys(profileData).length > 0) {
-        // Mengamankan poin agar tidak ter-reset jika tidak dikirim backend
-        const profilePoints = Number(
-          profileData.points ?? 
-          activeUser.points ?? 
-          0
-        );
+// Mengamankan poin agar tidak ter-reset jika tidak dikirim backend
+         const profilePoints = Number(
+           profileData.total_points ?? 
+           profileData.points ?? 
+           activeUser.points ?? 
+           0
+         );
 
         // Normalisasi field snake_case ke camelCase dilakukan di luar setState
         // untuk menghindari issues asynchronous (data lama yang dipakai untuk request selanjutnya)

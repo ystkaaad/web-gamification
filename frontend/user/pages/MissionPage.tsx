@@ -21,7 +21,7 @@ import { apiService } from '../services/apiService';
 interface GameConfig {
   id: string;
   name: string;
-  type: 'wheel' | 'scratch';
+  type: 'SPINWHEEL' | 'SCRATCHCARD' | 'DAILY_STREAK';
   cost_points: number;
   start_date: string;
   end_date: string;
@@ -73,6 +73,8 @@ const handlePlay = async (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     if (!game || !user) return;
 
+    console.log('USER OBJECT', JSON.stringify(user, null, 2));
+
     const userPoints = Math.round(Number(user.points) || 0);
     const gameCost = Math.round(Number(game.cost_points) || 0);
 
@@ -90,7 +92,7 @@ const handlePlay = async (gameId: string) => {
     setGameResult(null);
 
     try {
-      const cooldownCheckRes = await apiService.checkGameCooldown(game.id);
+      const cooldownCheckRes = await apiService.checkGameCooldown(user!.id, game.id);
       const cooldownCheck = cooldownCheckRes.data;
       if (!cooldownCheck.allowed) {
         setErrorModal(cooldownCheck.message || 'Anda masih dalam cooldown.');
@@ -98,71 +100,146 @@ const handlePlay = async (gameId: string) => {
         return;
       }
 
-      let segments = Array.isArray(game.config_data) 
-        ? game.config_data 
-        : (typeof game.config_data === 'string' ? (() => { try { return JSON.parse(game.config_data); } catch { return []; } })() : []);
+      if (game.type === 'SPINWHEEL') {
+        let segments = Array.isArray(game.config_data) 
+          ? game.config_data 
+          : (typeof game.config_data === 'string' ? (() => { try { return JSON.parse(game.config_data); } catch { return []; } })() : []);
 
-      if (segments.length === 0) {
-        setErrorModal('Hadiah game belum dikonfigurasi oleh admin. Silakan coba game lain.');
-        setIsPlaying(false);
-        return;
-      }
+        if (segments.length === 0) {
+          setErrorModal('Hadiah game belum dikonfigurasi oleh admin. Silakan coba game lain.');
+          setIsPlaying(false);
+          return;
+        }
 
-      const playResponse = await apiService.spinGame(user!.id, game.id);
-      const playData = playResponse.data;
+        console.log('SPIN REQUEST', {
+          userId: user?.id,
+          gameId: game?.id
+        });
+        const playResponse = await apiService.spinGame(user!.id, game.id);
+        console.log('SPIN RESPONSE', playResponse?.data);
+        const playData = playResponse?.data;
 
-      if (!playData?.success) {
-        setErrorModal(playData?.message || 'Gagal memproses game.');
-        setIsPlaying(false);
-        return;
-      }
+        if (!playData?.success) {
+          setErrorModal(playData?.message || 'Gagal memproses game.');
+          setIsPlaying(false);
+          return;
+        }
 
-      const backendResult = playData.data;
-      const prizeLabel = backendResult?.prizeLabel ?? 'Zonk';
-      const prizeValue = Number(backendResult?.rewardValue ?? backendResult?.prizeValue ?? 0) || 0;
-      const prizeType = backendResult?.rewardType ?? backendResult?.prizeType ?? 'POINT';
-      const selectedIdx = backendResult?.selectedIndex ?? backendResult?.prizeId ?? 0;
-      const segmentsCount = segments.length;
-      const segmentAngle = 360 / segmentsCount;
-      const targetStopAngle = 270 - ((selectedIdx + 0.5) * segmentAngle);
-      const extraSpins = 5 * 360;
-      const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
+        const backendResult = playData.data;
+        const prizeLabel = backendResult?.prizeLabel ?? 'Zonk';
+        const prizeValue = Number(backendResult?.rewardValue ?? backendResult?.prizeValue ?? 0) || 0;
+        const prizeType = backendResult?.rewardType ?? backendResult?.prizeType ?? 'POINT';
+        const selectedIdx = backendResult?.selectedIndex ?? backendResult?.prizeId ?? 0;
+        const segmentsCount = segments.length;
+        const segmentAngle = 360 / segmentsCount;
+        console.log('SPIN DEBUG', {
+          selectedIndex: backendResult?.selectedIndex,
+          rewardValue: backendResult?.rewardValue,
+          prizeLabel: backendResult?.prizeLabel,
+          segments,
+          selectedSegment: segments?.[selectedIdx]
+        });
+        // Jarum roda di posisi ATAS (12 o'clock) = 0/360 derajat
+        // Segment 0 berada di kanan (3 o'clock), berputar clockwise
+        // Formula: ((selectedIdx + 0.5) * segmentAngle) - 90 membuat roda berhenti di tengah segment
+        const targetStopAngle = ((selectedIdx + 0.5) * segmentAngle) - 90;
+        const extraSpins = 5 * 360;
+        const nextRotation = rotation + extraSpins + (targetStopAngle - (rotation % 360));
+      console.log('SPIN VISUAL DEBUG', {
+        selectedIndex: selectedIdx,
+        segmentAngle,
+        targetStopAngle,
+        rotation,
+        nextRotation,
+        segments
+      });
       setRotation(nextRotation);
 
-      const isVoucher = prizeType === 'VOUCHER';
-      const numericValue = Number(String(prizeLabel).replace(/[^0-9]/g, '')) || 0;
-      const isZonk = prizeType === 'POINT' && numericValue === 0 && !isVoucher;
+        const isVoucher = prizeType === 'VOUCHER';
+        const isZonk = Number(prizeValue) <= 0 && !isVoucher;
 
-      const message = isVoucher
-        ? `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`
-        : prizeValue > 0
-          ? `Selamat! Anda memenangkan ${prizeLabel}`
-          : 'Yah, coba lagi lain kali ya!';
+        const message = isVoucher
+          ? `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`
+          : prizeValue > 0
+            ? `Selamat! Anda memenangkan ${prizeValue} Poin`
+            : 'Yah, coba lagi lain kali ya!';
 
-      // Wait for wheel animation to complete
-      await new Promise(r => setTimeout(r, 4500));
+        await new Promise(r => setTimeout(r, 4500));
 
-      // Refresh user data after spin completes
-      if (typeof refreshData === 'function') {
-        await refreshData();
-      }
+        if (typeof refreshData === 'function') {
+          await refreshData();
+        }
 
-      setGameResult({
-        success: true,
-        prizeLabel,
-        prizeValue,
-        prizeType,
-        isZonk,
-        message,
-      });
-
-      if (prizeValue > 0 && !isVoucher) {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#FB923C', '#FFFFFF', '#FFEDD5']
+        setGameResult({
+          success: true,
+          prizeLabel,
+          prizeValue,
+          prizeType,
+          isZonk,
+          message,
         });
+
+        if (prizeValue > 0 && !isVoucher) {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#FB923C', '#FFFFFF', '#FFEDD5']
+          });
+        }
+      } else {
+        console.log('SCRATCH REQUEST TYPE', {
+          method: 'POST',
+          body: {
+            userId: user?.id,
+            gameId: game?.id
+          }
+        });
+        const playResponse = await apiService.scratchGame(user!.id, game.id);
+        console.log('SCRATCH RESPONSE', playResponse?.data);
+        const playData = playResponse?.data;
+
+        if (!playData?.success) {
+          setErrorModal(playData?.message || 'Gagal memproses game.');
+          setIsPlaying(false);
+          return;
+        }
+
+        const backendResult = playData.data;
+        const prizeLabel = backendResult?.prizeLabel ?? 'Zonk';
+        const prizeValue = Number(backendResult?.rewardValue ?? backendResult?.prizeValue ?? 0) || 0;
+        const prizeType = backendResult?.rewardType ?? backendResult?.prizeType ?? 'POINT';
+
+        const isVoucher = prizeType === 'VOUCHER';
+        const isZonk = Number(prizeValue) <= 0 && !isVoucher;
+
+        const message = isVoucher
+          ? `Keren! Voucher "${prizeLabel}" otomatis masuk ke Koleksi Anda.`
+          : prizeValue > 0
+            ? `Selamat! Anda memenangkan ${prizeValue} Poin`
+            : 'Yah, coba lagi lain kali ya!';
+
+        if (typeof refreshData === 'function') {
+          await refreshData();
+        }
+
+        setGameResult({
+          success: true,
+          prizeLabel,
+          prizeValue,
+          prizeType,
+          isZonk,
+          message,
+        });
+
+        if (prizeValue > 0 && !isVoucher) {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#FB923C', '#FFFFFF', '#FFEDD5']
+          });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -171,7 +248,7 @@ const handlePlay = async (gameId: string) => {
       setIsPlaying(false);
     }
   };
-  const isExpired = (endDate: string) => new Date() > new Date(endDate);
+  const isExpired = (endDate?: string) => endDate ? new Date() > new Date(endDate) : false;
 
   if (loading || appLoading) {
     return (
@@ -277,7 +354,7 @@ const handlePlay = async (gameId: string) => {
                       
                       <div className="flex items-center gap-4">
                         <button 
-                          disabled={!game.is_active || hasExpired || (user && Math.round(Number(user.points) || 0) < Math.round(Number(game.cost_points) || 0))}
+                          disabled={Boolean(!game.is_active || hasExpired || (user && Math.round(Number(user.points) || 0) < Math.round(Number(game.cost_points) || 0)))}
                           className={`px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
                             !game.is_active || hasExpired || (user && Math.round(Number(user.points) || 0) < Math.round(Number(game.cost_points) || 0))
                             ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
@@ -488,9 +565,9 @@ const handlePlay = async (gameId: string) => {
                       </div>
                     </div>
                   ) : (
-                    <button 
-                      disabled={isPlaying || (user && Math.round(Number(user.points) || 0) < Math.round(Number(activeGame.cost_points) || 0))}
-                      onClick={() => handlePlay(activeGame.id)}
+<button 
+                       disabled={Boolean(isPlaying || (user && Math.round(Number(user.points) || 0) < Math.round(Number(activeGame.cost_points) || 0)))}
+                       onClick={() => handlePlay(activeGame.id)}
                       className="w-full py-5 bg-orange-400 text-white rounded-2xl font-black text-sm hover:bg-orange-500 disabled:opacity-50 transition-all shadow-xl shadow-orange-100 uppercase tracking-[0.2em] active:scale-95"
                     >
                       {isPlaying ? (

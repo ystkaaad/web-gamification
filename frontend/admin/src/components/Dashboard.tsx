@@ -288,7 +288,7 @@ export default function Dashboard() {
     { label: 'Total Pengguna', value: stats.users, icon: Users, color: 'text-orange-600', bg: 'bg-orange-100/50', trend: '+12%' },
     { label: 'Misi Aktif', value: stats.missions, icon: Target, color: 'text-amber-600', bg: 'bg-amber-100/50', trend: '+5%' },
     { label: 'Voucher Tersedia', value: stats.vouchers, icon: Ticket, color: 'text-rose-600', bg: 'bg-rose-100/50', trend: '-2%' },
-    { label: 'Total Interaksi Game', value: stats.totalInteractions.toLocaleString('id-ID'), icon: Gamepad2, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+28%' },
+    { label: 'Total Aktivitas Gamification', value: stats.totalInteractions.toLocaleString('id-ID'), icon: Gamepad2, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+28%' },
   ];
 
   if (loading) {

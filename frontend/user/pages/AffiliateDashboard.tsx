@@ -8,11 +8,11 @@ import {
   Check, Zap, Star, Search,
   Award, Wallet, BarChart3,
   Percent, ArrowRight, Crown,
-  ArrowUpRight, Info
+  ArrowUpRight, Info, Gift
 } from 'lucide-react';
 
 const AffiliateDashboard: React.FC = () => {
-  const { user, referralMembers, isLoading } = useApp();
+  const { user, referralMembers, isLoading, games, missions, vouchers } = useApp();
   const [copied, setCopied] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -320,10 +320,40 @@ const AffiliateDashboard: React.FC = () => {
                      </div>
                   </div>
                </div>
-            </div>
-          </motion.div>
-
-          {/* Quick Analytics */}
+</div>
+           </motion.div>
+ 
+           {/* Affiliate Benefits Section */}
+           <motion.div variants={itemVariants} className="bg-white rounded-[4rem] border border-slate-100 shadow-2xl overflow-hidden">
+             <div className="px-12 py-10 border-b border-slate-100">
+               <h3 className="text-3xl font-black tracking-tight italic uppercase text-slate-800 mb-2">Keuntungan Affiliate.</h3>
+               <p className="text-slate-500 font-medium">Manfaakan semua fitur eksklusif yang tersedia untuk Anda.</p>
+             </div>
+             <div className="p-10">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 {[
+                   { icon: Zap, title: 'Komisi Affiliate', desc: 'Dapatkan komisi dari setiap referral yang berhasil melakukan transaksi.', color: 'text-orange-500', bg: 'bg-orange-50' },
+                   { icon: Gift, title: 'Reward Eksklusif', desc: 'Tukarkan poin dengan reward khusus affiliate.', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                   { icon: BarChart3, title: 'Statistik Referral', desc: 'Pantau performa referral secara realtime.', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                   { icon: Crown, title: 'Level Affiliate', desc: 'Naik level untuk mendapatkan keuntungan lebih besar.', color: 'text-amber-500', bg: 'bg-amber-50' },
+                 ].map((benefit, i) => (
+                   <motion.div 
+                     key={i} 
+                     whileHover={{ y: -5, scale: 1.02 }}
+                     className="bg-white rounded-[2.5rem] p-8 border border-slate-100 hover:border-orange-200 shadow-sm hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300 flex flex-col items-center text-center"
+                   >
+                     <div className={`w-16 h-16 ${benefit.bg} ${benefit.color} rounded-2xl flex items-center justify-center mb-5 shadow-inner`}>
+                       <benefit.icon size={28} />
+                     </div>
+                     <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight mb-2">{benefit.title}</h4>
+                     <p className="text-slate-500 text-xs font-medium leading-relaxed">{benefit.desc}</p>
+                   </motion.div>
+                 ))}
+               </div>
+             </div>
+           </motion.div>
+ 
+           {/* Quick Analytics */}
           <motion.div variants={itemVariants} className="bg-[#0F172A] rounded-[4rem] p-12 text-white space-y-12 shadow-2xl relative overflow-hidden group">
              <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/10 blur-[100px] rounded-full group-hover:scale-150 transition-transform duration-1000"></div>
              <div className="flex items-center justify-between relative z-10">

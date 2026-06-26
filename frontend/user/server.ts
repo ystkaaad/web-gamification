@@ -214,6 +214,181 @@ async function startServer() {
     }
   });
 
+  // 2b. Spin Game Endpoint (matches apiService.spinGame)
+  app.post("/api/games/spin", (req, res) => {
+    console.log("================================");
+    console.log("🚨 SPIN ENDPOINT HIT");
+    console.log("BODY:", req.body);
+    console.log("================================");
+    
+    const { userId, gameId } = req.body;
+    console.log('🚨 SPIN REQUEST MASUK KE SINI 🚨');
+    
+    if (!userId || !gameId) {
+      return res.status(400).json({ success: false, message: "userId dan gameId wajib diisi" });
+    }
+    
+    const activeUserId = userId || "MEM-001";
+    const currentUserPoints = getUserPoints(activeUserId);
+    
+    const gamesConfig: Record<string, { cost: number, prizes: { id: number, label: string, prize_type: string, value: number | string, probability?: number }[] }> = {
+      "spinwheel": {
+        cost: 25,
+        prizes: [
+          { id: 0, label: "Voucher", prize_type: "VOUCHER", value: "Voucher Gratis", probability: 100 },
+          { id: 1, label: "Zonk", prize_type: "ZONK", value: 0, probability: 0 },
+          { id: 2, label: "550 Point", prize_type: "POINT", value: 550, probability: 0 },
+        ]
+      }
+    };
+    
+    let game = gamesConfig[gameId as string];
+    if (!game) {
+      game = gamesConfig["spinwheel"];
+    }
+    
+    if (currentUserPoints < game.cost) {
+      return res.status(400).json({ success: false, message: "Saldo poin tidak mencukupi." });
+    }
+    
+try {
+       MOCK_DB.point_ledgers.push({
+         id: MOCK_DB.point_ledgers.length + 1,
+         user_id: activeUserId,
+         amount: -game.cost,
+         type: "REDEEM",
+         description: `Bermain ${gameId}`
+       });
+       
+// Weighted probability selection
+        const totalProbability = game.prizes.reduce(
+          (sum, prize) => sum + (Number(prize.probability) || 0), 0
+        );
+        
+        // BYPASS: If any prize has probability 100, always select it
+        const guaranteedPrize = game.prizes.find(p => Number(p.probability) === 100);
+        let selectedPrize, selectedIndex;
+        
+        if (guaranteedPrize) {
+          selectedPrize = guaranteedPrize;
+          selectedIndex = game.prizes.indexOf(guaranteedPrize);
+        } else {
+          let random = Math.random() * totalProbability;
+          selectedPrize = game.prizes[0];
+          selectedIndex = 0;
+          
+          for (let i = 0; i < game.prizes.length; i++) {
+            random -= Number(game.prizes[i].probability) || 0;
+            if (random <= 0) {
+              selectedPrize = game.prizes[i];
+              selectedIndex = i;
+              break;
+            }
+          }
+        }
+        
+        console.log('SPIN PROBABILITY DEBUG', {
+          prizes: game.prizes,
+          totalProbability,
+          selectedIndex,
+          selectedPrize
+        });
+
+       if (selectedPrize.prize_type === "POINT") {
+         MOCK_DB.point_ledgers.push({
+           id: MOCK_DB.point_ledgers.length + 1,
+           user_id: activeUserId,
+           amount: selectedPrize.value as number,
+           type: "EARN",
+           description: `Hadiah dari ${gameId}`
+         });
+       }
+       
+       res.json({
+         success: true,
+         data: {
+           prizeId: selectedPrize.id,
+           prizeLabel: selectedPrize.label,
+           prizeValue: selectedPrize.value,
+           prizeType: selectedPrize.prize_type,
+           selectedIndex: selectedIndex
+         }
+       });
+     } catch (error) {
+       res.status(500).json({ success: false, message: "Gagal memproses game." });
+     }
+   });
+
+   // 2c. Scratch Game Endpoint (matches apiService.scratchGame)
+  app.post("/api/games/scratch", (req, res) => {
+    const { userId, gameId } = req.body;
+    console.log('SERVER SCRATCH REQUEST', { userId, gameId });
+    
+    if (!userId || !gameId) {
+      return res.status(400).json({ success: false, message: "userId dan gameId wajib diisi" });
+    }
+    
+    const activeUserId = userId || "MEM-001";
+    const currentUserPoints = getUserPoints(activeUserId);
+    
+    const gamesConfig: Record<string, { cost: number, prizes: { id: number, label: string, prize_type: string, value: number | string }[] }> = {
+      "scratchcard": {
+        cost: 15,
+        prizes: [
+          { id: 0, label: "10 POINTS", prize_type: "POINT", value: 10 },
+          { id: 1, label: "25 POINTS", prize_type: "POINT", value: 25 },
+          { id: 2, label: "50 POINTS", prize_type: "POINT", value: 50 },
+          { id: 3, label: "ZONK", prize_type: "ZONK", value: 0 },
+        ]
+      }
+    };
+    
+    let game = gamesConfig[gameId as string];
+    if (!game) {
+      game = gamesConfig["scratchcard"];
+    }
+    
+    if (currentUserPoints < game.cost) {
+      return res.status(400).json({ success: false, message: "Saldo poin tidak mencukupi." });
+    }
+    
+    try {
+      MOCK_DB.point_ledgers.push({
+        id: MOCK_DB.point_ledgers.length + 1,
+        user_id: activeUserId,
+        amount: -game.cost,
+        type: "REDEEM",
+        description: `Bermain ${gameId}`
+      });
+      
+      const randomIndex = Math.floor(Math.random() * game.prizes.length);
+      const winPrize = game.prizes[randomIndex];
+      
+      if (winPrize.prize_type === "POINT") {
+        MOCK_DB.point_ledgers.push({
+          id: MOCK_DB.point_ledgers.length + 1,
+          user_id: activeUserId,
+          amount: winPrize.value as number,
+          type: "EARN",
+          description: `Hadiah dari ${gameId}`
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          prizeId: winPrize.id,
+          prizeLabel: winPrize.label,
+          prizeValue: winPrize.value,
+          prizeType: winPrize.prize_type,
+          selectedIndex: winPrize.id
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Gagal memproses game." });
+    }
+  });
+
   // 3. Daily Streak Configuration
   app.get("/api/streaks/config", (req, res) => {
     res.json({

@@ -189,8 +189,15 @@ export default function GameManager() {
   };
 
   const updateSegment = (index: number, field: keyof Segment, value: any) => {
+    const segmentBefore = segments[index];
     const newSegments = [...segments];
     newSegments[index] = { ...newSegments[index], [field]: value };
+    const segmentAfter = newSegments[index];
+    console.log('PROBABILITY UPDATE', {
+      index,
+      segmentBefore,
+      segmentAfter
+    });
     setSegments(newSegments);
   };
 
@@ -245,6 +252,7 @@ const handleUpdateGame = async (updatedGame: Partial<GameSetting>) => {
           ...seg,
           label: seg.label || String(seg.value)
         }));
+        console.log('SPINWHEEL SAVE', { configData: syncedSegments });
         finalGame.config_data = syncedSegments;
       } else if (finalGame.type === 'SCRATCHCARD') {
         finalGame.config_data = rewards;
