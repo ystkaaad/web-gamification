@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { 
-  User, Mail, Calendar, Hash, 
+  User, Mail, Hash, 
   Shield, Crown, Gem, ChevronRight, 
   CheckCircle2, Info, Edit3, Zap,
   TrendingUp, Briefcase, Award, Star, X
@@ -84,32 +84,35 @@ const Profile: React.FC = () => {
             {isAffiliate ? <Briefcase size={200} /> : <Crown size={200} />}
           </div>
           
-          {/* Avatar & User Info */}
-          <div className="flex flex-col md:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
-            <div className="relative group/avatar">
-              <div className="w-28 h-28 bg-white/20 backdrop-blur-md rounded-[2rem] p-1.5 border border-white/40 shadow-2xl overflow-hidden">
-                 <img 
-                   src={`https://i.pravatar.cc/200?u=${user?.id || 'default'}`} 
-                   className="w-full h-full object-cover rounded-[1.5rem] group-hover/avatar:scale-110 transition-transform duration-500" 
-                   alt="Profile" 
-                 />
-              </div>
-              <div className="absolute -bottom-3 -right-3 bg-slate-900 text-white p-2.5 rounded-xl shadow-xl border-2 border-orange-500 rotate-12 group-hover/avatar:rotate-0 transition-transform">
-                {isAffiliate ? <Award size={20} fill="currentColor" className="text-amber-400" /> : <Crown size={20} fill="currentColor" className="text-amber-400" />}
-              </div>
-            </div>
+{/* Avatar & User Info */}
+           <div className="flex flex-col md:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+             <div className="relative group/avatar">
+               <div className="w-28 h-28 bg-white/20 backdrop-blur-md rounded-[2rem] p-1.5 border border-white/40 shadow-2xl overflow-hidden">
+                 {user?.avatar ? (
+                   <img 
+                     src={user.avatar} 
+                     className="w-full h-full object-cover rounded-[1.5rem] group-hover/avatar:scale-110 transition-transform duration-500" 
+                     alt="Profile" 
+                   />
+                 ) : (
+                   <div className="w-full h-full rounded-[1.5rem] bg-orange-100 flex items-center justify-center">
+                     <User size={48} className="text-orange-500" />
+                   </div>
+                 )}
+               </div>
+               <div className="absolute -bottom-3 -right-3 bg-slate-900 text-white p-2.5 rounded-xl shadow-xl border-2 border-orange-500 rotate-12 group-hover/avatar:rotate-0 transition-transform">
+                 {isAffiliate ? <Award size={20} fill="currentColor" className="text-amber-400" /> : <Crown size={20} fill="currentColor" className="text-amber-400" />}
+               </div>
+             </div>
             
-            <div className="text-center md:text-left space-y-2">
-              <div className="flex flex-col md:flex-row items-center gap-3">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">{user?.name}</h1>
-                <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black px-4 py-1.5 rounded-full border border-white/30 uppercase tracking-[0.2em] shadow-sm">
-                  {user?.isAffiliate ? 'AFFILIATE' : 'MEMBER'}
-                </span>
-              </div>
-              <p className="text-orange-100 font-medium flex items-center justify-center md:justify-start gap-1.5 text-sm">
-                <Calendar size={14} className="opacity-80" /> Terdaftar Sejak 2024
-              </p>
-            </div>
+<div className="text-center md:text-left space-y-2">
+               <div className="flex flex-col md:flex-row items-center gap-3">
+                 <h1 className="text-3xl md:text-4xl font-black tracking-tight">{user?.name}</h1>
+                 <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black px-4 py-1.5 rounded-full border border-white/30 uppercase tracking-[0.2em] shadow-sm">
+                   {user?.isAffiliate ? 'AFFILIATE' : 'MEMBER'}
+                 </span>
+               </div>
+             </div>
           </div>
 
           {/* Points Box (Tanpa Tombol Edit Profil) */}

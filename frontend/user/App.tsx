@@ -42,7 +42,7 @@ const TopNavbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center">
         <div className="flex-shrink-0 flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/dashboard')}>
           <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-orange-100 group-hover:scale-110 transition-transform">N</div>
-          <span className="text-xl font-bold text-slate-900 tracking-tight">Ngolabify <span className="text-[10px] bg-orange-50 text-orange-700 px-2 py-1 rounded-lg ml-2">{user.isAffiliate ? 'AFFILIATE' : 'MEMBER'}</span></span>
+          <span className="text-xl font-bold text-slate-900 tracking-tight">Ngolabi Rewards <span className="text-[10px] bg-orange-50 text-orange-700 px-2 py-1 rounded-lg ml-2">{user.isAffiliate ? 'AFFILIATE' : 'MEMBER'}</span></span>
         </div>
 
         <nav className="flex-1 flex justify-center items-center gap-2">

@@ -88,11 +88,11 @@ export default function UserView() {
       // TODO: Migrate to backend user-missions/complete when available
       await dbService.updatePoints(
         userId, 
-        mission.reward_points, 
+        mission.reward_points ?? mission.rewardPoints ?? 0, 
         `Klaim Misi: ${mission.title}`
       );
       
-      toast.success(`Misi "${mission.title}" diklaim! +${mission.reward_points} PTS`);
+      toast.success(`Misi "${mission.title}" diklaim! +${mission.reward_points ?? mission.rewardPoints ?? 0} PTS`);
       loadData(true);
     } catch (err) {
       toast.error('Gagal mengklaim misi');

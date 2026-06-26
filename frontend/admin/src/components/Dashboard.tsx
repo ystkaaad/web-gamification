@@ -124,7 +124,7 @@ const normalizeMission = (mission: MissionRecord, index: number): Mission => {
     is_active:
       mission.is_active === true ||
       String(mission.is_active) === 'true' ||
-      mission.status === 'active',
+      String(mission.status) === 'active',
     config_data: configData,
   };
 };
@@ -147,7 +147,6 @@ const normalizeVoucher = (voucher: VoucherRecord, index: number): Voucher => {
     voucher_value: voucher.voucher_value,
     max_discount: voucher.max_discount,
     min_purchase: voucher.min_purchase,
-    cashier_instruction: voucher.cashier_instruction,
   };
 };
 

@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { useApp } from '../AppContext';
 import { Gift, Wallet, Clock, Ticket, CheckCircle, Search, Filter } from 'lucide-react';
 
+import PlaceholderImage from '../src/assets/voucher-placeholder.svg';
+
 const getVoucherImageUrl = (imageUrl: string | undefined): string => {
-  if (!imageUrl) return 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=225&fit=crop';
+  if (!imageUrl) return PlaceholderImage;
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }

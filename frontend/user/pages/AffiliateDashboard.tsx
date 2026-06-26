@@ -5,14 +5,14 @@ import { motion, Variants } from 'motion/react';
 import { useApp } from '../AppContext';
 import { 
   Share2, Users, Trophy, Copy, 
-  Check, Zap, Star, Search,
+  Check, Zap, Search,
   Award, Wallet, BarChart3,
   Percent, ArrowRight, Crown,
-  ArrowUpRight, Info, Gift
+  ArrowUpRight, Info, Gift, User, DollarSign
 } from 'lucide-react';
 
 const AffiliateDashboard: React.FC = () => {
-  const { user, referralMembers, isLoading, games, missions, vouchers } = useApp();
+  const { user, referralMembers, referralHistory, isLoading, games, missions, vouchers } = useApp();
   const [copied, setCopied] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -57,6 +57,8 @@ const AffiliateDashboard: React.FC = () => {
   const currentLevel = user?.memberLevel || 'SILVER';
   const req = getLevelReq(currentLevel);
   const totalPoints = user?.points || 0;
+  const totalCommission = (referralHistory || []).reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0);
+  const formatNumber = (num: number) => num.toLocaleString('id-ID');
   // Progress bar logic removed as affiliate leveling is now external
   const memberProgress = 100; // Always show as reached/managed externally
 
@@ -118,12 +120,12 @@ const AffiliateDashboard: React.FC = () => {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-       {[
-          { label: 'Network Points', value: totalPoints?.toLocaleString() ?? '0', unit: 'XP', icon: Wallet, shadow: 'shadow-orange-100', color: 'text-orange-600', bg: 'bg-orange-50', trend: 'Active', trendColor: 'text-emerald-500' },
-          { label: 'External Rank', value: user?.memberLevel || 'SILVER', unit: 'BADGE', icon: Crown, shadow: 'shadow-indigo-100', color: 'text-indigo-600', bg: 'bg-indigo-50', trend: 'Verified', trendColor: 'text-slate-400' },
-          { label: 'Network Size', value: referralMembers.length.toString(), unit: 'USERS', icon: Users, shadow: 'shadow-emerald-100', color: 'text-emerald-600', bg: 'bg-emerald-50', trend: 'Live', trendColor: 'text-emerald-500' },
-          { label: 'Yield Gen', value: referralMembers.reduce((acc, m) => acc + (m.contributionPoints ?? 0), 0).toLocaleString(), unit: 'XP', icon: Star, shadow: 'shadow-amber-100', color: 'text-amber-600', bg: 'bg-amber-50', trend: 'Growing', trendColor: 'text-emerald-500' },
-        ].map((stat, idx) => (
+{[
+           { label: 'Total Komisi', value: formatNumber(totalCommission) ?? '0', unit: 'Poin', icon: DollarSign, shadow: 'shadow-orange-100', color: 'text-orange-600', bg: 'bg-orange-50', trend: 'Active', trendColor: 'text-emerald-500' },
+           { label: 'Network Points', value: totalPoints?.toLocaleString() ?? '0', unit: 'XP', icon: Wallet, shadow: 'shadow-orange-100', color: 'text-orange-600', bg: 'bg-orange-50', trend: 'Active', trendColor: 'text-emerald-500' },
+           { label: 'External Rank', value: user?.memberLevel || 'SILVER', unit: 'BADGE', icon: Crown, shadow: 'shadow-indigo-100', color: 'text-indigo-600', bg: 'bg-indigo-50', trend: 'Verified', trendColor: 'text-slate-400' },
+           { label: 'Network Size', value: referralMembers.length.toString(), unit: 'USERS', icon: Users, shadow: 'shadow-emerald-100', color: 'text-emerald-600', bg: 'bg-emerald-50', trend: 'Live', trendColor: 'text-emerald-500' },
+         ].map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} whileHover={{ y: -5 }} className={`bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl ${stat.shadow} flex flex-col justify-between group hover:border-orange-200 transition-all`}>
             <div className="flex items-start justify-between mb-8">
               <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
@@ -219,11 +221,17 @@ const AffiliateDashboard: React.FC = () => {
                   key={`${member.id}-${idx}`} 
                   className="flex items-center justify-between p-8 rounded-[3rem] bg-white border border-slate-50 hover:border-orange-200 hover:shadow-2xl hover:shadow-orange-100/30 transition-all group"
                  >
-                   <div className="flex items-center gap-6">
-                     <div className="relative">
-                        <img src={member.avatar} className="w-20 h-20 rounded-[2.5rem] object-cover border-4 border-slate-100 shadow-md group-hover:border-orange-100 transition-colors" alt="" />
+<div className="flex items-center gap-6">
+                      <div className="relative">
+                        {member.avatar ? (
+                          <img src={member.avatar} className="w-20 h-20 rounded-[2.5rem] object-cover border-4 border-slate-100 shadow-md group-hover:border-orange-100 transition-colors" alt="" />
+                        ) : (
+                          <div className="w-20 h-20 rounded-[2.5rem] bg-orange-100 border-4 border-slate-100 shadow-md group-hover:border-orange-100 transition-colors flex items-center justify-center">
+                            <User size={36} className="text-orange-500" />
+                          </div>
+                        )}
                         <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white shadow-sm" />
-                     </div>
+                      </div>
                      <div className="space-y-1">
                        <h4 className="font-black text-slate-900 text-xl leading-none italic">{member.name}</h4>
                        <div className="flex items-center gap-4">

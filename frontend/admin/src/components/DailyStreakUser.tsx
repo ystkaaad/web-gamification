@@ -24,7 +24,7 @@ export default function DailyStreakUser({ game, user, onClose, onUpdateUser }: D
 
   useEffect(() => {
     try {
-      const data = JSON.parse(game.config_data || '{}');
+      const data = JSON.parse(String(game.config_data || '{}'));
       setConfig({
         baseReward: data.baseReward || 100,
         streakBonus: data.streakBonus || 1000,

@@ -5,7 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { 
   History, Target, ArrowRight, Zap, 
-  ShieldCheck, Trophy, Star, Award, Crown 
+  ShieldCheck, Star, Award, Crown 
 } from 'lucide-react';
 import { Transaction, Mission, LoyaltyLevel } from '../types';
 
@@ -99,8 +99,7 @@ const Dashboard: React.FC = () => {
     transactions, 
     isLoading: appLoading, 
     isSyncing, 
-    refreshData, 
-    logout 
+    refreshData
   } = useApp();
   
   const navigate = useNavigate();
@@ -343,7 +342,7 @@ if (!user || !user.id) {
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic leading-none">{currentLevelLabel}</span>
                         </div>
                       </div>
-<div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <div className="rounded-xl bg-white p-4 border border-slate-200 shadow-sm">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1">Total Poin</p>
                           <p className="text-2xl md:text-3xl font-black text-orange-600 tracking-tight">{totalPoints.toLocaleString()}</p>
@@ -358,9 +357,6 @@ if (!user || !user.id) {
                         )}
                       </div>
                    </div>
-<button onClick={() => { logout(); navigate('/'); }} className="w-full px-4 py-3 md:px-5 md:py-4 mt-2 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all">
-                      Keluar Akun
-                    </button>
                 </div>
              </div>
           </motion.div>
@@ -441,20 +437,8 @@ if (!user || !user.id) {
             </motion.div>
           </div>
 
-          <div className="lg:col-span-4 space-y-10">
-            <motion.div variants={itemVariants} className="bg-[#0F172A] rounded-2xl p-6 md:p-10 text-white relative overflow-hidden shadow-lg md:shadow-2xl">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-600/10 blur-[80px] rounded-full"></div>
-               <div className="flex items-center justify-between mb-12 border-b border-white/5 pb-8 relative z-10">
-                  <h4 className="text-xl font-black tracking-tight italic uppercase">Top Elite</h4>
-                  <Crown size={24} className="text-orange-400" />
-               </div>
-               <div className="flex flex-col items-center justify-center py-20 opacity-30 relative z-10">
-                  <Trophy size={64} strokeWidth={1} className="mb-4" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Update In 24h</p>
-               </div>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="bg-white border border-slate-100 rounded-2xl p-6 md:p-10 shadow-sm space-y-8 min-h-[320px] md:min-h-[400px]">
+<div className="lg:col-span-4 space-y-10">
+             <motion.div variants={itemVariants} className="bg-white border border-slate-100 rounded-2xl p-6 md:p-10 shadow-sm space-y-8 min-h-[320px] md:min-h-[400px]">
                <div className="flex items-center justify-between pb-4 border-b border-slate-50">
                   <h4 className="text-xl font-black text-slate-900 tracking-tight italic uppercase">Activity</h4>
                   <History size={18} className={`${isSyncing ? 'animate-spin text-orange-500' : 'text-slate-300'}`} />

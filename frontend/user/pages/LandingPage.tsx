@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import HeroImage from '../../src/assets/hero.jpg';
 import { 
   CheckCircle2, Star, ArrowRight, Zap, Gift, Menu, X, ChevronDown, User, Sparkles, MapPin, MessageCircle, TrendingUp, Smartphone
 } from 'lucide-react';
@@ -54,7 +55,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
             <div className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform">N</div>
-            <span className={`text-2xl font-black tracking-tighter text-[#0F172A]`}>Ngolabify</span>
+            <span className={`text-2xl font-black tracking-tighter text-[#0F172A]`}>Ngolab Rewards</span>
           </div>
 
           {/* Desktop Nav */}
@@ -133,11 +134,11 @@ const LandingPage: React.FC = () => {
             </div>
             
             <h1 className="text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter text-[#0F172A]">
-              Bukan Sekadar <br/><span className="text-orange-500 italic underline decoration-orange-100">Jajan Biasa.</span>
+              Jajan Lebih Untung <br/><span className="text-orange-500 italic underline decoration-orange-100">Main Lebih Seru !</span>
             </h1>
             
             <p className="text-lg text-slate-500 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
-              Transformasi setiap gigitan menjadi poin berharga. Ngolabify menghubungkan ratusan outlet favorit dalam satu ekosistem reward yang seru dan menguntungkan.
+              Setiap jajan jadi lebih seru! Kumpulkan poin, selesaikan misi, mainkan game, dan tukarkan reward favoritmu dalam satu aplikasi.
             </p>
             
           {/* Hero Section CTA */}
@@ -171,11 +172,11 @@ const LandingPage: React.FC = () => {
 
           <div className="relative hidden lg:block">
             <div className="relative z-10 bg-gradient-to-br from-orange-200 to-orange-400 aspect-[4/5] rounded-[4rem] shadow-2xl p-2 rotate-3 overflow-hidden group">
-               <img 
-                 src="https://images.unsplash.com/photo-1629814249584-bd4d53cf0e7d?q=80&w=2071&auto=format&fit=crop" 
-                 className="w-full h-full object-cover rounded-[3.5rem] group-hover:scale-110 transition-transform duration-[3000ms]"
-                 alt="Loyalty Experience"
-               />
+<img 
+                  src={HeroImage}
+                  className="w-full h-full object-cover rounded-[3.5rem] group-hover:scale-110 transition-transform duration-[3000ms]"
+                  alt="Loyalty Experience"
+                />
                <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent"></div>
                
                <div className="absolute bottom-12 left-12 right-12 bg-white px-8 py-6 rounded-[2.5rem] border border-orange-100 shadow-xl">
@@ -203,7 +204,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-4 mb-20">
              <span className="text-orange-600 font-black text-[10px] uppercase tracking-[0.4em]">Simple Steps</span>
-             <h2 className="text-4xl md:text-6xl font-black text-[#0F172A] tracking-tighter italic">Bagaimana Ngolabify <br/><span className="text-orange-600">Bekerja?</span></h2>
+             <h2 className="text-4xl md:text-6xl font-black text-[#0F172A] tracking-tighter italic">Bagaimana Ngolab Rewards <br/><span className="text-orange-600">Bekerja?</span></h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -365,7 +366,7 @@ const LandingPage: React.FC = () => {
               <div className="space-y-6 col-span-1 md:col-span-1">
                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center text-white font-black">N</div>
-                    <span className="text-[#0F172A] font-black text-xl tracking-tighter">Ngolabify</span>
+                    <span className="text-[#0F172A] font-black text-xl tracking-tighter">Ngolab Rewards</span>
                  </div>
                  <p className="text-sm leading-relaxed">Platform gamifikasi loyalitas modern untuk ekosistem kuliner terbaik di Indonesia.</p>
                  <div className="flex gap-4">
@@ -397,7 +398,7 @@ const LandingPage: React.FC = () => {
            </div>
 
            <div className="mt-12 text-center text-[10px] text-slate-300 font-black uppercase tracking-widest">
-              © 2024 Ngolabify Gamification Platform. All Rights Reserved.
+              © 2024 Ngolab Rewards Gamification Platform. All Rights Reserved.
            </div>
         </div>
       </footer>

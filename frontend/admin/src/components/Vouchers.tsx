@@ -56,8 +56,8 @@ const normalizeVoucher = (voucher: Record<string, unknown>, index: number): Vouc
                 : undefined)),
     max_discount: Number(voucher.max_discount ?? voucher.maxDiscount ?? 0),
     min_purchase: Number(voucher.min_purchase ?? voucher.minPurchase ?? 0),
-    voucher_code: voucher.voucher_code ?? voucher.voucherCode,
-    voucher_name: voucher.voucher_name ?? voucher.voucherName,
+    voucher_code: String(voucher.voucher_code ?? voucher.voucherCode ?? ''),
+    voucher_name: String(voucher.voucher_name ?? voucher.voucherName ?? ''),
   };
 };
 

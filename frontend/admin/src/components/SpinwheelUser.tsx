@@ -36,7 +36,7 @@ export default function SpinwheelUser({ game, user, onClose, onUpdateUser }: Spi
 
   useEffect(() => {
     try {
-      const data = JSON.parse(game.config_data || '[]');
+      const data = JSON.parse(String(game.config_data || '[]'));
       if (Array.isArray(data) && data.length > 0) {
         // Menerima kotak hadiah dinamis dari Admin
         setSegments(data);

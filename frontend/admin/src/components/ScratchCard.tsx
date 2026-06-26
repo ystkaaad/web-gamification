@@ -34,7 +34,7 @@ export default function ScratchCard({ game, user, onClose, onUpdateUser }: Scrat
 
   useEffect(() => {
     try {
-      const data = JSON.parse(game.config_data || '[]');
+      const data = JSON.parse(String(game.config_data || '[]'));
       setRewards(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Failed to parse rewards", e);

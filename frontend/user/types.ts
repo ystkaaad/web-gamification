@@ -33,6 +33,7 @@ export interface User {
   isAffiliate?: boolean;
   is_affiliate?: boolean;
   role?: string;
+  avatar?: string;
 }
 
 export interface Transaction {
